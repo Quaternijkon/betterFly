@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  Play, Square, BarChart2, Clock, Settings, History, Edit2, Trash2, 
-  Save, X, Plus, LayoutGrid, CheckCircle2, Loader2, 
+  Square, BarChart2, Clock, Settings, History, Edit2, Trash2, 
+  Save, X, Plus, LayoutGrid, CheckCircle2, 
   User as UserIcon, Activity, Filter, ChevronDown, Check, 
   Calendar as CalendarIcon, Grid, List, Moon, Sun, Download, Upload,
   TrendingUp, FileText, PlusCircle, Hash, Zap, Coffee, Maximize
 } from 'lucide-react';
 
 // --- Types (Offline Version) ---
-// Dates are stored as ISO strings in LocalStorage
 interface Goal {
   type: 'positive' | 'negative';
   metric: 'count' | 'duration';
@@ -21,15 +20,15 @@ interface EventType {
   name: string;
   color: string;
   archived: boolean;
-  createdAt: string; // ISO String
+  createdAt: string; 
   goal?: Goal | null;
 }
 
 interface Session {
   id: string;
   eventId: string;
-  startTime: string; // ISO String
-  endTime: string | null; // ISO String or null
+  startTime: string; 
+  endTime: string | null; 
   note?: string;
 }
 
@@ -132,7 +131,7 @@ const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
 };
 
 // Trend Chart
-const TrendChart = ({ data, events, metric, period, darkMode }: any) => {
+const TrendChart = ({ data, events, metric, darkMode }: any) => {
   const height = 300;
   const width = 800;
   const padding = 40;
@@ -193,7 +192,7 @@ const TrendChart = ({ data, events, metric, period, darkMode }: any) => {
 };
 
 // Timeline Spectrum
-const DailyTimelineSpectrum = ({ sessions, color, darkMode }: any) => {
+const DailyTimelineSpectrum = ({ sessions, color }: any) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -295,7 +294,7 @@ const HeatmapCalendar = ({ dataMap, color, title, unit, weekStart = 1, darkMode 
         <div className="flex gap-[2px] min-w-max">
           {weeks.map((week, wIdx) => (
             <div key={wIdx} className="flex flex-col gap-[2px]">
-              {week.map((day, dIdx) => {
+              {week.map((day) => {
                 const { opacity, color: bg } = getIntensity(day.val);
                 return <div key={day.key} title={`${day.date.toLocaleDateString()}: ${Math.floor(day.val)} ${unit}`} className="w-3 h-3 rounded-[1px]" style={{ backgroundColor: bg, opacity: bg.startsWith('#') && bg !== color ? 1 : opacity }} />;
               })}
@@ -423,7 +422,7 @@ const GoalRing = ({ goal, current, color, timeProgress }: any) => {
 };
 
 // Edit Event Modal
-const EditEventModal = ({ eventType, onClose, onSave, onDelete, darkMode }: any) => {
+const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
   const [name, setName] = useState(eventType.name);
   const [color, setColor] = useState(eventType.color);
   const [goal, setGoal] = useState<Goal | null>(eventType.goal || null);
@@ -471,7 +470,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete, darkMode }: any)
 };
 
 // Edit Session Modal
-const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMode, darkMode }: any) => {
+const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMode }: any) => {
   const [start, setStart] = useState(session?.startTime ? dateToInputString(session.startTime) : dateToInputString(new Date()));
   const [end, setEnd] = useState(session?.endTime ? dateToInputString(session.endTime) : '');
   const [eventId, setEventId] = useState(session?.eventId || (eventTypes[0]?.id || ''));
@@ -728,7 +727,7 @@ export default function App() {
     setEditingSession(null);
   }
 
-  const handleAddSession = (id: string, s: string, e: string | null, evId: string, n: string) => {
+  const handleAddSession = (_id: string, s: string, e: string | null, evId: string, n: string) => {
     const newSession = { id: uuid(), startTime: s, endTime: e, eventId: evId, note: n };
     setSessions(prev => [newSession, ...prev]);
     setIsAddMode(false);
@@ -925,8 +924,9 @@ export default function App() {
               <h3 className="font-bold text-sm mb-4">创建新事件</h3>
               <div className="flex gap-2">
                 <input value={newEventName} onChange={e => setNewEventName(e.target.value)} placeholder="事件名称" className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 dark:text-white" />
-                <button onClick={handleCreateEvent} disabled={!newEventName} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded-xl disabled:opacity-50">创建</button>
+                <div className="flex gap-1">{DEFAULT_COLORS.slice(0, 4).map(c => <button key={c} onClick={() => setNewEventColor(c)} className={`w-8 h-8 rounded-full border-2 ${newEventColor === c ? 'border-gray-400 scale-110' : 'border-transparent'}`} style={{backgroundColor: c}} />)}</div>
               </div>
+              <button onClick={handleCreateEvent} disabled={!newEventName} className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl disabled:opacity-50">创建</button>
             </div>
 
             <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
