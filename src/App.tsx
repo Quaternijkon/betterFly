@@ -1803,7 +1803,7 @@ export default function App() {
       {/* SIDEBAR (Desktop Only) */}
       <div className="hidden md:flex w-20 bg-[#fdfcff] dark:bg-[#191c22] border-r border-gray-100 dark:border-gray-800 flex-col items-center justify-between py-6 z-10 sticky top-0 h-screen">
         <div className="font-bold text-xl tracking-tight flex flex-col items-center justify-center leading-none select-none">
-          <span className="text-[#4285F4]">B</span>
+          <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>B</span>
           <span className="text-[#EA4335] font-serif italic transform -rotate-12" style={{ fontFamily: 'Times New Roman' }}>e</span>
         </div>
         <nav className="flex flex-col gap-6">
@@ -1820,19 +1820,19 @@ export default function App() {
         </div>
       </div>
 
-      <main className="flex-1 p-4 md:p-10 overflow-y-auto h-[100dvh] md:h-screen relative scroll-smooth safe-area-bottom pb-24 md:pb-6">
+      <main className="flex-1 p-4 md:p-10 overflow-y-auto h-[100dvh] md:h-screen relative scroll-smooth safe-area-bottom pb-16 md:pb-6">
         {/* Mobile Header Auth */}
         <div className="md:hidden flex justify-between items-center mb-6 pt-safe px-1">
           <div className="font-bold text-2xl tracking-tight flex items-baseline select-none">
-            <span className="text-[#4285F4]">b</span>
+            <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>b</span>
             <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
-            <span className="text-[#FBBC05]">t</span>
-            <span className="text-[#4285F4]">t</span>
-            <span className="text-[#34A853]">e</span>
-            <span className="text-[#EA4335]">r</span>
-            <span className="text-[#4285F4]">F</span>
-            <span className="text-[#34A853]">l</span>
-            <span className="text-[#EA4335]">y</span>
+            <span className="text-[#FBBC05] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
+            <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
+            <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
+            <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>r</span>
+            <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>F</span>
+            <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>l</span>
+            <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>y</span>
           </div>
           <button onClick={() => user ? setView('settings') : setShowAuthModal(true)} className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-full border border-gray-200 dark:border-gray-600">
             {user ? <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">{user.email?.[0].toUpperCase() || 'U'}</div> : <Icons.User size={20} className="text-gray-600 dark:text-gray-300 m-1" />}
@@ -2287,10 +2287,10 @@ export default function App() {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/80 dark:bg-gray-900/85 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-800/50 flex justify-around items-center h-20 z-50 px-2 pb-safe shadow-lg transition-all duration-300">
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/80 dark:bg-gray-900/85 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-800/50 flex justify-around items-center h-14 z-50 px-2 pb-safe shadow-lg transition-all duration-300">
         {[{ id: 'home', icon: Icons.LayoutGrid, label: '主页' }, { id: 'history', icon: Icons.History, label: '历史' }, { id: 'stats', icon: Icons.BarChart2, label: '统计' }, { id: 'settings', icon: Icons.Settings, label: '设置' }].map(item => (
-          <button key={item.id} onClick={() => setView(item.id as any)} className={`flex flex-col items-center justify-center w-full h-full gap-1.5 ${view === item.id ? 'text-blue-600 dark:text-blue-400 scale-105' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'} transition-all active:scale-95`}>
-            <item.icon size={22} strokeWidth={view === item.id ? 2.5 : 2} className={view === item.id ? 'fill-blue-100 dark:fill-blue-900/30' : ''} />
+          <button key={item.id} onClick={() => setView(item.id as any)} className={`flex flex-row items-center justify-center w-full h-full gap-2 ${view === item.id ? 'text-blue-600 dark:text-blue-400 scale-105' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'} transition-all active:scale-95`}>
+            <item.icon size={20} strokeWidth={view === item.id ? 2.5 : 2} className={view === item.id ? 'fill-blue-100 dark:fill-blue-900/30' : ''} />
             <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
           </button>
         ))}
