@@ -1255,7 +1255,7 @@ export default function App() {
   const [isAddMode, setIsAddMode] = useState(false);
   const [stoppingSessionId, setStoppingSessionId] = useState<string | null>(null);
   const [stoppingNote, setStoppingNote] = useState('');
-  
+
   const themeRgb = useMemo(() => hexToRgb(settings.themeColor), [settings.themeColor]);
 
   // 1. Auth Listener
