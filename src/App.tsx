@@ -72,7 +72,7 @@ interface UserSettings {
 }
 
 // --- Constants ---
-const DEFAULT_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#f43f5e', '#a855f7', '#06b6d4', '#84cc16'];
+const DEFAULT_COLORS = ['#4285F4', '#EA4335', '#FBBC05', '#34A853', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#f43f5e', '#a855f7', '#06b6d4', '#84cc16'];
 const MONTH_NAMES = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 const STORAGE_KEYS = {
   SESSIONS: 'tracker_sessions',
@@ -273,12 +273,12 @@ const AuthModal = ({ onClose, onLoginSuccess }: { onClose: () => void, onLoginSu
     <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white dark:bg-[#18181b] rounded-[32px] w-full max-w-[400px] shadow-2xl overflow-hidden relative">
         {/* Header Design */}
-        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-blue-500/20 to-purple-500/20 dark:from-blue-900/40 dark:to-purple-900/40 pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-[#4285F4]/20 to-purple-500/20 dark:from-[#3367D6]/40 dark:to-purple-900/40 pointer-events-none" />
 
         <div className="relative p-8 pt-10">
           <div className="flex justify-between items-start mb-8">
             <div>
-              <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 mb-2">M.</div>
+              <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#4285F4] to-purple-600 dark:from-[#4285F4]/80 dark:to-purple-400 mb-2">M.</div>
               <h3 className="text-xl font-bold dark:text-white">Welcome Back</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">登录或自动注册账号</p>
             </div>
@@ -325,7 +325,7 @@ const AuthModal = ({ onClose, onLoginSuccess }: { onClose: () => void, onLoginSu
                 placeholder="邮箱地址"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-blue-500/50 outline-none transition-all text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400"
+                className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-[#4285F4]/50 outline-none transition-all text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400"
                 required
               />
               <input
@@ -333,7 +333,7 @@ const AuthModal = ({ onClose, onLoginSuccess }: { onClose: () => void, onLoginSu
                 placeholder="密码"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-blue-500/50 outline-none transition-all text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400"
+                className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-[#4285F4]/50 outline-none transition-all text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400"
                 required
                 minLength={6}
               />
@@ -382,7 +382,7 @@ const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
 
   return (
     <div className="relative z-30" ref={containerRef}>
-      <button onClick={() => setIsOpen(!isOpen)} className="flex items-center justify-between w-full md:w-auto gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-sm font-medium hover:border-blue-300 transition-colors shadow-sm dark:text-gray-200">
+      <button onClick={() => setIsOpen(!isOpen)} className="flex items-center justify-between w-full md:w-auto gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-sm font-medium hover:border-[#4285F4]/60 transition-colors shadow-sm dark:text-gray-200">
         <div className="flex items-center gap-2 truncate">
           <Icons.Filter size={16} className="text-gray-500 dark:text-gray-400 shrink-0" />
           <span className="truncate">{label} ({selectedIds.length})</span>
@@ -392,7 +392,7 @@ const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-full md:w-64 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-xl p-2 max-h-60 overflow-y-auto z-50">
           <button onClick={toggleAll} className="flex items-center gap-2 w-full p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">
-            <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedIds.length === options.length ? 'bg-blue-600 border-blue-600' : 'border-gray-300 dark:border-gray-500'}`}>
+            <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedIds.length === options.length ? 'bg-[#4285F4] border-[#4285F4]' : 'border-gray-300 dark:border-gray-500'}`}>
               {selectedIds.length === options.length && <Icons.Check size={10} className="text-white" />}
             </div>
             全选 / 清空
@@ -400,7 +400,7 @@ const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
           <div className="h-px bg-gray-100 dark:bg-gray-700 my-1" />
           {options.map((opt: any) => (
             <button key={opt.id} onClick={() => toggleOne(opt.id)} className="flex items-center gap-2 w-full p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300">
-              <div className={`w-4 h-4 border rounded flex items-center justify-center shrink-0 ${selectedIds.includes(opt.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300 dark:border-gray-500'}`}>
+              <div className={`w-4 h-4 border rounded flex items-center justify-center shrink-0 ${selectedIds.includes(opt.id) ? 'bg-[#4285F4] border-[#4285F4]' : 'border-gray-300 dark:border-gray-500'}`}>
                 {selectedIds.includes(opt.id) && <Icons.Check size={10} className="text-white" />}
               </div>
               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: opt.color }} />
@@ -691,9 +691,9 @@ const HeatmapCalendar = ({ dataMap, color, title, unit, weekStart = 1, darkMode 
           <h4 className="font-bold text-gray-700 dark:text-gray-200 text-sm">{title}</h4>
         </div>
         <div className="flex bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg">
-          <button onClick={() => setViewMode('git')} className={`p-1.5 rounded-md ${viewMode === 'git' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}><Icons.Grid size={14} /></button>
-          <button onClick={() => setViewMode('year')} className={`p-1.5 rounded-md ${viewMode === 'year' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}><Icons.List size={14} /></button>
-          <button onClick={() => setViewMode('calendar')} className={`p-1.5 rounded-md ${viewMode === 'calendar' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-400'}`}><Icons.Calendar size={14} /></button>
+          <button onClick={() => setViewMode('git')} className={`p-1.5 rounded-md ${viewMode === 'git' ? 'bg-white dark:bg-gray-600 shadow-sm text-[#4285F4] dark:text-[#4285F4]/80' : 'text-gray-400'}`}><Icons.Grid size={14} /></button>
+          <button onClick={() => setViewMode('year')} className={`p-1.5 rounded-md ${viewMode === 'year' ? 'bg-white dark:bg-gray-600 shadow-sm text-[#4285F4] dark:text-[#4285F4]/80' : 'text-gray-400'}`}><Icons.List size={14} /></button>
+          <button onClick={() => setViewMode('calendar')} className={`p-1.5 rounded-md ${viewMode === 'calendar' ? 'bg-white dark:bg-gray-600 shadow-sm text-[#4285F4] dark:text-[#4285F4]/80' : 'text-gray-400'}`}><Icons.Calendar size={14} /></button>
         </div>
       </div>
       {viewMode === 'git' && renderGitView()}
@@ -895,11 +895,11 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
         type={type}
         value={value}
         onChange={onChange}
-        className="peer w-full bg-gray-50 dark:bg-[#2c3038] border-b-2 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 outline-none pt-6 pb-2 px-4 rounded-t-lg transition-colors text-gray-900 dark:text-gray-100 placeholder-transparent"
+        className="peer w-full bg-gray-50 dark:bg-[#2c3038] border-b-2 border-gray-300 dark:border-gray-600 focus:border-[#4285F4] dark:focus:border-[#4285F4]/80 outline-none pt-6 pb-2 px-4 rounded-t-lg transition-colors text-gray-900 dark:text-gray-100 placeholder-transparent"
         placeholder={label}
         id={label}
       />
-      <label htmlFor={label} className="absolute left-4 top-2 text-xs text-gray-500 dark:text-gray-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-xs peer-focus:text-blue-500 dark:peer-focus:text-blue-400 font-medium cursor-text">
+      <label htmlFor={label} className="absolute left-4 top-2 text-xs text-gray-500 dark:text-gray-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-xs peer-focus:text-[#4285F4] dark:peer-focus:text-[#4285F4]/80 font-medium cursor-text">
         {label}
       </label>
     </div>
@@ -953,9 +953,9 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                 onChange={e => setNewTag(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAddTag()}
                 placeholder="输入标签后回车..."
-                className="flex-1 bg-transparent border-b border-gray-200 dark:border-gray-700 px-2 py-1 text-sm outline-none focus:border-blue-500 text-gray-900 dark:text-gray-100"
+                className="flex-1 bg-transparent border-b border-gray-200 dark:border-gray-700 px-2 py-1 text-sm outline-none focus:border-[#4285F4] text-gray-900 dark:text-gray-100"
               />
-              <button onClick={handleAddTag} disabled={!newTag.trim()} className="text-blue-600 text-sm font-bold disabled:opacity-50">添加</button>
+              <button onClick={handleAddTag} disabled={!newTag.trim()} className="text-[#4285F4] text-sm font-bold disabled:opacity-50">添加</button>
             </div>
           </div>
 
@@ -966,7 +966,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
               {goal ?
                 <button onClick={() => setGoal(null)} className="text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded-full bg-white dark:bg-[#1e2025] border dark:border-red-900/30">移除目标</button>
                 :
-                <button onClick={() => setGoal({ type: 'positive', metric: 'count', period: 'week', targetValue: 5 })} className="text-xs text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-3 py-1.5 rounded-full bg-white dark:bg-[#1e2025] border border-blue-100 dark:border-blue-900 font-bold shadow-sm">+ 启用目标</button>
+                <button onClick={() => setGoal({ type: 'positive', metric: 'count', period: 'week', targetValue: 5 })} className="text-xs text-[#4285F4] dark:text-[#4285F4]/60 hover:bg-[#4285F4]/10 dark:hover:bg-[#3367D6]/20 px-3 py-1.5 rounded-full bg-white dark:bg-[#1e2025] border border-[#4285F4]/20 dark:border-[#3367D6] font-bold shadow-sm">+ 启用目标</button>
               }
             </div>
 
@@ -986,7 +986,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                   {/* 2. Frequency */}
                   <div className="space-y-1">
                     <label className="text-[10px] text-gray-400 font-bold uppercase ml-2">周期</label>
-                    <select value={goal.period} onChange={e => setGoal({ ...goal, period: e.target.value as any })} className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm outline-none focus:ring-2 focus:ring-blue-500/20">
+                    <select value={goal.period} onChange={e => setGoal({ ...goal, period: e.target.value as any })} className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm outline-none focus:ring-2 focus:ring-[#4285F4]/20">
                       <option value="week">每周 / Weekly</option>
                       <option value="month">每月 / Monthly</option>
                     </select>
@@ -995,7 +995,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                   {/* 3. Metric */}
                   <div className="space-y-1">
                     <label className="text-[10px] text-gray-400 font-bold uppercase ml-2">单位</label>
-                    <select value={goal.metric} onChange={e => setGoal({ ...goal, metric: e.target.value as any })} className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm outline-none focus:ring-2 focus:ring-blue-500/20">
+                    <select value={goal.metric} onChange={e => setGoal({ ...goal, metric: e.target.value as any })} className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm outline-none focus:ring-2 focus:ring-[#4285F4]/20">
                       <option value="count">次数 (Times)</option>
                       <option value="duration">时长 (Seconds)</option>
                     </select>
@@ -1020,7 +1020,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                             const m = Math.floor((goal.targetValue % 3600) / 60);
                             setGoal({ ...goal, targetValue: h * 3600 + m * 60 });
                           }}
-                          className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-lg font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500/20"
+                          className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-lg font-mono font-bold outline-none focus:ring-2 focus:ring-[#4285F4]/20"
                           placeholder="0"
                         />
                         <span className="absolute right-3 top-4 text-xs text-gray-400 font-bold">hr</span>
@@ -1036,7 +1036,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                             const m = Number(e.target.value);
                             setGoal({ ...goal, targetValue: h * 3600 + m * 60 });
                           }}
-                          className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-lg font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500/20"
+                          className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-lg font-mono font-bold outline-none focus:ring-2 focus:ring-[#4285F4]/20"
                           placeholder="0"
                         />
                         <span className="absolute right-3 top-4 text-xs text-gray-400 font-bold">min</span>
@@ -1048,7 +1048,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                       min="1"
                       value={goal.targetValue}
                       onChange={e => setGoal({ ...goal, targetValue: Number(e.target.value) })}
-                      className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-lg font-mono font-bold outline-none focus:ring-2 focus:ring-blue-500/20"
+                      className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-lg font-mono font-bold outline-none focus:ring-2 focus:ring-[#4285F4]/20"
                     />
                   )}
 
@@ -1065,7 +1065,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
           {!isNew && <button onClick={() => { if (confirm('确定删除此事件及其所有记录？')) onDelete(eventType.id); }} className="px-4 py-2.5 rounded-full text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium text-sm flex items-center gap-2"><Icons.Trash2 size={18} /> 删除</button>}
           <div className="flex-1"></div>
           <button onClick={onClose} className="px-6 py-2.5 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#2c3038] rounded-full font-medium text-sm transition-colors">取消</button>
-          <button onClick={() => onSave(eventType.id, name, color, goal, tags)} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm shadow-md hover:shadow-lg transition-all">保存更改</button>
+          <button onClick={() => onSave(eventType.id, name, color, goal, tags)} className="px-6 py-2.5 bg-[#4285F4] hover:bg-[#3367D6] text-white rounded-full font-bold text-sm shadow-md hover:shadow-lg transition-all">保存更改</button>
         </div>
       </div>
     </div>
@@ -1115,7 +1115,7 @@ const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMod
           </div>
           <div>
             <label className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg cursor-pointer">
-              <input type="checkbox" checked={incomplete} onChange={e => setIncomplete(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+              <input type="checkbox" checked={incomplete} onChange={e => setIncomplete(e.target.checked)} className="w-5 h-5 rounded border-gray-300 text-[#4285F4] focus:ring-[#4285F4]" />
               <div>
                 <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">标记为未完成</span>
                 <span className="block text-xs text-gray-500 dark:text-gray-400">计入时间投入，但不计入完成次数</span>
@@ -1138,7 +1138,7 @@ const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMod
           {!isAddMode && <button onClick={() => { if (confirm('确定删除?')) onDelete(session.id); }} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium"><Icons.Trash2 size={16} /> 删除</button>}
           <div className={`flex gap-3 ${isAddMode ? 'ml-auto' : ''}`}>
             <button onClick={onClose} className="px-4 py-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm font-medium dark:text-gray-300">取消</button>
-            <button onClick={handleSave} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm"><Icons.Save size={16} /> 保存</button>
+            <button onClick={handleSave} className="px-4 py-2 bg-[#4285F4] hover:bg-[#3367D6] text-white rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm"><Icons.Save size={16} /> 保存</button>
           </div>
         </div>
       </div>
@@ -1165,7 +1165,7 @@ const StopSessionModal = ({ onStop, onClose }: any) => {
           </div>
 
           <label className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-            <input type="checkbox" checked={incomplete} onChange={e => setIncomplete(e.target.checked)} className="w-5 h-5 rounded text-blue-600" />
+            <input type="checkbox" checked={incomplete} onChange={e => setIncomplete(e.target.checked)} className="w-5 h-5 rounded text-[#4285F4]" />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-200">标记为未完成 (中途放弃)</span>
           </label>
 
@@ -1184,7 +1184,7 @@ const StopSessionModal = ({ onStop, onClose }: any) => {
 
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 py-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-medium">取消</button>
-          <button onClick={() => onStop(note, incomplete, rating)} className="flex-1 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-md">完成</button>
+          <button onClick={() => onStop(note, incomplete, rating)} className="flex-1 py-2 bg-[#4285F4] text-white rounded-xl font-bold hover:bg-[#3367D6] shadow-md">完成</button>
         </div>
       </div>
     </div>
@@ -1807,15 +1807,30 @@ export default function App() {
           <span className="text-[#EA4335] font-serif italic transform -rotate-12" style={{ fontFamily: 'Times New Roman' }}>e</span>
         </div>
         <nav className="flex flex-col gap-6">
-          {[{ id: 'home', icon: Icons.LayoutGrid }, { id: 'history', icon: Icons.History }, { id: 'stats', icon: Icons.BarChart2 }, { id: 'settings', icon: Icons.Settings }].map(item => (
-            <button key={item.id} onClick={() => setView(item.id as any)} className={`p-2 rounded-xl transition-all ${view === item.id ? 'bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}><item.icon size={24} /></button>
-          ))}
+          {[
+            { id: 'home', icon: Icons.LayoutGrid, color: '#4285F4' },
+            { id: 'history', icon: Icons.History, color: '#EA4335' },
+            { id: 'stats', icon: Icons.BarChart2, color: '#FBBC05' },
+            { id: 'settings', icon: Icons.Settings, color: '#34A853' }
+          ].map(item => {
+            const isActive = view === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setView(item.id as any)}
+                className={`p-2 rounded-xl transition-all ${isActive ? 'dark:bg-gray-700' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                style={isActive ? { backgroundColor: `${item.color}15`, color: item.color } : {}}
+              >
+                <item.icon size={24} />
+              </button>
+            );
+          })}
         </nav>
         <div className="hidden md:block pb-4 cursor-pointer" onClick={() => user ? setView('settings') : setShowAuthModal(true)}>
           {user ? (
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs" title={user.email || 'User'}>{user.email?.[0].toUpperCase() || 'U'}</div>
+            <div className="w-8 h-8 rounded-full bg-[#4285F4]/20 text-[#4285F4] flex items-center justify-center font-bold text-xs" title={user.email || 'User'}>{user.email?.[0].toUpperCase() || 'U'}</div>
           ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-blue-100 transition-colors"><Icons.User size={16} className="text-gray-400" /></div>
+            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-[#4285F4]/20 transition-colors"><Icons.User size={16} className="text-gray-400" /></div>
           )}
         </div>
       </div>
@@ -1835,7 +1850,7 @@ export default function App() {
             <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>y</span>
           </div>
           <button onClick={() => user ? setView('settings') : setShowAuthModal(true)} className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-full border border-gray-200 dark:border-gray-600">
-            {user ? <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">{user.email?.[0].toUpperCase() || 'U'}</div> : <Icons.User size={20} className="text-gray-600 dark:text-gray-300 m-1" />}
+            {user ? <div className="w-7 h-7 rounded-full bg-[#4285F4] text-white flex items-center justify-center text-xs font-bold">{user.email?.[0].toUpperCase() || 'U'}</div> : <Icons.User size={20} className="text-gray-600 dark:text-gray-300 m-1" />}
           </button>
         </div>
 
@@ -1869,7 +1884,7 @@ export default function App() {
                       flex flex-col justify-between p-5 min-h-[160px]
                       rounded-[24px] border-0
                       ${isActive
-                        ? 'bg-blue-50 dark:bg-[#1e2330] ring-2 ring-blue-500/20 cursor-default'
+                        ? 'bg-[#4285F4]/10 dark:bg-[#1e2330] ring-2 ring-[#4285F4]/20 cursor-default'
                         : 'bg-[#f3f4f9] dark:bg-[#2e3035] hover:bg-[#eef1fa] dark:hover:bg-[#363a42] hover:shadow-lg hover:-translate-y-1'
                       }
                     `}
@@ -1877,7 +1892,7 @@ export default function App() {
                     <div className="flex justify-between items-start w-full mb-4">
                       <div className={`
                         w-10 h-10 rounded-xl flex items-center justify-center text-xl
-                        ${isActive ? 'bg-blue-200 dark:bg-blue-900 text-blue-700 dark:text-blue-200' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300'}
+                        ${isActive ? 'bg-[#4285F4]/40 dark:bg-[#3367D6] text-[#4285F4] dark:text-[#4285F4]/40' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300'}
                       `} style={isActive ? {} : { color: et.color }}>
                         {et.name[0]}
                       </div>
@@ -1912,7 +1927,7 @@ export default function App() {
                 );
               })}
 
-              <button onClick={() => setView('settings')} className="flex flex-col items-center justify-center p-4 rounded-[24px] border border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-gray-800/50 transition-all text-gray-400 min-h-[160px]">
+              <button onClick={() => setView('settings')} className="flex flex-col items-center justify-center p-4 rounded-[24px] border border-dashed border-gray-300 dark:border-gray-600 hover:border-[#4285F4]/80 dark:hover:border-[#4285F4] hover:bg-[#4285F4]/5 dark:hover:bg-gray-800/50 transition-all text-gray-400 min-h-[160px]">
                 <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-2">
                   <Icons.Plus size={24} />
                 </div>
@@ -1943,7 +1958,7 @@ export default function App() {
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold">历史记录</h1>
               <div className="flex gap-2">
-                <button onClick={() => { setEditingSession(null); setIsAddMode(true); }} className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-bold shadow-sm"><Icons.PlusCircle size={16} /> 补录</button>
+                <button onClick={() => { setEditingSession(null); setIsAddMode(true); }} className="flex items-center gap-1 bg-[#4285F4] hover:bg-[#3367D6] text-white px-3 py-2 rounded-lg text-sm font-bold shadow-sm"><Icons.PlusCircle size={16} /> 补录</button>
                 <MultiSelectFilter options={eventTypes} selectedIds={historySelectedIds} onChange={setHistorySelectedIds} label="筛选" />
               </div>
             </div>
@@ -1952,7 +1967,7 @@ export default function App() {
                 const et = eventTypes.find(e => e.id === s.eventId);
                 const duration = !s.endTime ? (Date.now() - new Date(s.startTime).getTime()) / 1000 : ((new Date(s.endTime).getTime()) - (new Date(s.startTime).getTime())) / 1000;
                 return (
-                  <div key={s.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between group hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
+                  <div key={s.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between group hover:border-[#4285F4]/40 dark:hover:border-[#3367D6] transition-colors">
                     <div className="flex items-start gap-4">
                       <div className="mt-1 w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: et?.color }} />
                       <div>
@@ -1962,7 +1977,7 @@ export default function App() {
                         {s.note && <div className="mt-2 text-xs text-gray-500 bg-gray-50 dark:bg-gray-700/50 p-2 rounded italic"><Icons.FileText size={10} className="inline mr-1" />{s.note}</div>}
                       </div>
                     </div>
-                    <button onClick={() => { setEditingSession(s); setIsAddMode(false); }} className="p-2 text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg"><Icons.Edit2 size={16} /></button>
+                    <button onClick={() => { setEditingSession(s); setIsAddMode(false); }} className="p-2 text-gray-300 hover:text-[#4285F4] dark:hover:text-[#4285F4]/80 rounded-lg"><Icons.Edit2 size={16} /></button>
                   </div>
                 );
               })}
@@ -1981,18 +1996,18 @@ export default function App() {
                 <div className="flex flex-wrap gap-2">
                   <MultiSelectFilter options={eventTypes} selectedIds={statsSelectedIds} onChange={setStatsSelectedIds} label="事件" />
                   <MultiSelectFilter options={Array.from(new Set(eventTypes.flatMap(e => e.tags || []))).map(t => ({ id: t, name: t, color: '#9ca3af' }))} selectedIds={filterTags} onChange={setFilterTags} label="标签" />
-                  <select value={filterRating || ''} onChange={e => setFilterRating(e.target.value ? Number(e.target.value) : null)} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-500 outline-none">
+                  <select value={filterRating || ''} onChange={e => setFilterRating(e.target.value ? Number(e.target.value) : null)} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:border-[#4285F4] outline-none">
                     <option value="">所有评分</option>
                     <option value="5">5 星</option>
                     <option value="4">4 星及以上</option>
                     <option value="3">3 星及以上</option>
                   </select>
-                  <select value={filterIncomplete} onChange={e => setFilterIncomplete(e.target.value as any)} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-500 outline-none">
+                  <select value={filterIncomplete} onChange={e => setFilterIncomplete(e.target.value as any)} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:border-[#4285F4] outline-none">
                     <option value="all">状态: 全部</option>
                     <option value="complete">仅完成</option>
                     <option value="incomplete">仅未完</option>
                   </select>
-                  <select value={filterHasNote} onChange={e => setFilterHasNote(e.target.value as any)} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-500 outline-none">
+                  <select value={filterHasNote} onChange={e => setFilterHasNote(e.target.value as any)} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:border-[#4285F4] outline-none">
                     <option value="all">备注: 全部</option>
                     <option value="yes">有备注</option>
                     <option value="no">无备注</option>
@@ -2015,7 +2030,7 @@ export default function App() {
                     <div className="bg-white dark:bg-[#1e2330] p-5 rounded-[24px] flex flex-col justify-between h-32 hover:shadow-md transition-all duration-300 group">
                       <div className="flex justify-between items-start">
                         <div className="text-3xl font-light text-gray-900 dark:text-white font-mono tracking-tight group-hover:scale-110 transition-transform origin-left">{value}</div>
-                        <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-[#2c3038] flex items-center justify-center text-gray-400 group-hover:text-blue-500 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-[#2c3038] flex items-center justify-center text-gray-400 group-hover:text-[#4285F4] transition-colors">
                           <Icon size={16} />
                         </div>
                       </div>
@@ -2083,13 +2098,13 @@ export default function App() {
                   <h4 className="font-bold text-gray-700 dark:text-gray-200 text-sm">趋势变化</h4>
                   <div className="flex gap-2">
                     <div className="bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
-                      <button onClick={() => setTrendPeriod('day')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'day' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-300 font-bold' : 'text-gray-500'}`}>日</button>
-                      <button onClick={() => setTrendPeriod('week')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'week' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-300 font-bold' : 'text-gray-500'}`}>周</button>
-                      <button onClick={() => setTrendPeriod('month')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'month' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-300 font-bold' : 'text-gray-500'}`}>月</button>
+                      <button onClick={() => setTrendPeriod('day')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'day' ? 'bg-white dark:bg-gray-600 shadow-sm text-[#4285F4] dark:text-[#4285F4]/60 font-bold' : 'text-gray-500'}`}>日</button>
+                      <button onClick={() => setTrendPeriod('week')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'week' ? 'bg-white dark:bg-gray-600 shadow-sm text-[#4285F4] dark:text-[#4285F4]/60 font-bold' : 'text-gray-500'}`}>周</button>
+                      <button onClick={() => setTrendPeriod('month')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'month' ? 'bg-white dark:bg-gray-600 shadow-sm text-[#4285F4] dark:text-[#4285F4]/60 font-bold' : 'text-gray-500'}`}>月</button>
                     </div>
                     <div className="bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
-                      <button onClick={() => setTrendMetric('count')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'count' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-300 font-bold' : 'text-gray-500'}`}>次数</button>
-                      <button onClick={() => setTrendMetric('duration')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'duration' ? 'bg-white dark:bg-gray-600 shadow-sm text-blue-600 dark:text-blue-300 font-bold' : 'text-gray-500'}`}>时长</button>
+                      <button onClick={() => setTrendMetric('count')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'count' ? 'bg-white dark:bg-gray-600 shadow-sm text-[#4285F4] dark:text-[#4285F4]/60 font-bold' : 'text-gray-500'}`}>次数</button>
+                      <button onClick={() => setTrendMetric('duration')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'duration' ? 'bg-white dark:bg-gray-600 shadow-sm text-[#4285F4] dark:text-[#4285F4]/60 font-bold' : 'text-gray-500'}`}>时长</button>
                     </div>
                   </div>
                 </div>
@@ -2131,14 +2146,14 @@ export default function App() {
               {user ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">{user.email?.[0].toUpperCase() || 'U'}</div>
+                    <div className="w-10 h-10 rounded-full bg-[#4285F4]/20 text-[#4285F4] flex items-center justify-center font-bold">{user.email?.[0].toUpperCase() || 'U'}</div>
                     <div>
                       <div className="font-bold dark:text-white">{user.email || '匿名用户'}</div>
                       <div className="text-xs text-gray-400">UID: {user.uid.slice(0, 8)}...</div>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={handleSync} disabled={syncing} className="flex-1 flex items-center justify-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 py-2 rounded-xl text-sm font-bold">
+                    <button onClick={handleSync} disabled={syncing} className="flex-1 flex items-center justify-center gap-2 bg-[#4285F4]/10 dark:bg-[#3367D6]/30 text-[#4285F4] dark:text-[#4285F4]/80 py-2 rounded-xl text-sm font-bold">
                       {syncing ? <Icons.Loader2 className="animate-spin" size={16} /> : <Icons.Cloud size={16} />} <span>同步云端数据</span>
                     </button>
                     <button onClick={handleClearLocalData} className="flex-1 flex items-center justify-center gap-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 py-2 rounded-xl text-sm font-bold">
@@ -2169,7 +2184,7 @@ export default function App() {
                 <div className="text-center py-4">
                   <div className="flex justify-center mb-3 text-gray-300"><Icons.CloudOff size={32} /></div>
                   <p className="text-sm text-gray-500 mb-4">当前为离线模式，数据仅保存在本机。</p>
-                  <button onClick={() => setShowAuthModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold text-sm">登录 / 注册</button>
+                  <button onClick={() => setShowAuthModal(true)} className="bg-[#4285F4] hover:bg-[#3367D6] text-white px-6 py-2 rounded-xl font-bold text-sm">登录 / 注册</button>
                   <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <button onClick={handleClearLocalData} className="text-red-400 hover:text-red-500 text-xs flex items-center justify-center gap-1 mx-auto">
                       <Icons.Trash2 size={12} /> 清空本地数据
@@ -2184,7 +2199,7 @@ export default function App() {
               <h3 className="font-bold text-sm mb-4">事件管理</h3>
               <button
                 onClick={() => setEditingEventType({ id: 'new', name: '', color: DEFAULT_COLORS[0], archived: false, createdAt: '', goal: null })}
-                className="w-full py-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-2xl flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                className="w-full py-4 bg-[#4285F4]/10 dark:bg-[#3367D6]/20 border border-[#4285F4]/20 dark:border-[#3367D6]/30 rounded-2xl flex items-center justify-center gap-2 text-[#4285F4] dark:text-[#4285F4]/80 font-bold hover:bg-[#4285F4]/20 dark:hover:bg-[#3367D6]/40 transition-colors"
               >
                 <Icons.PlusCircle size={20} />
                 创建新事件
@@ -2193,10 +2208,10 @@ export default function App() {
               <div className="space-y-2 mt-4">
                 {eventTypes.length === 0 && <div className="text-center text-gray-400 text-sm py-4">暂无事件，请创建</div>}
                 {eventTypes.map(et => (
-                  <div key={et.id} onClick={() => setEditingEventType(et)} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#2c3038] rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-[#363b45] transition-colors border border-transparent hover:border-blue-200 dark:hover:border-blue-900/50 group">
+                  <div key={et.id} onClick={() => setEditingEventType(et)} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#2c3038] rounded-xl cursor-pointer hover:bg-gray-100 dark:hover:bg-[#363b45] transition-colors border border-transparent hover:border-[#4285F4]/40 dark:hover:border-[#3367D6]/50 group">
                     <div className="flex items-center gap-3">
                       <div className="w-4 h-4 rounded-full shadow-sm ring-1 ring-black/5 dark:ring-white/10" style={{ backgroundColor: et.color }} />
-                      <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{et.name}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-[#4285F4] dark:group-hover:text-[#4285F4]/80 transition-colors">{et.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {et.goal && (
@@ -2288,12 +2303,25 @@ export default function App() {
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/80 dark:bg-gray-900/85 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-800/50 flex justify-around items-center h-14 z-50 px-2 pb-safe shadow-lg transition-all duration-300">
-        {[{ id: 'home', icon: Icons.LayoutGrid, label: '主页' }, { id: 'history', icon: Icons.History, label: '历史' }, { id: 'stats', icon: Icons.BarChart2, label: '统计' }, { id: 'settings', icon: Icons.Settings, label: '设置' }].map(item => (
-          <button key={item.id} onClick={() => setView(item.id as any)} className={`flex flex-row items-center justify-center w-full h-full gap-2 ${view === item.id ? 'text-blue-600 dark:text-blue-400 scale-105' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'} transition-all active:scale-95`}>
-            <item.icon size={20} strokeWidth={view === item.id ? 2.5 : 2} className={view === item.id ? 'fill-blue-100 dark:fill-blue-900/30' : ''} />
-            <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
-          </button>
-        ))}
+        {[
+          { id: 'home', icon: Icons.LayoutGrid, label: '主页', color: '#4285F4' },
+          { id: 'history', icon: Icons.History, label: '历史', color: '#EA4335' },
+          { id: 'stats', icon: Icons.BarChart2, label: '统计', color: '#FBBC05' },
+          { id: 'settings', icon: Icons.Settings, label: '设置', color: '#34A853' }
+        ].map(item => {
+          const isActive = view === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setView(item.id as any)}
+              className={`flex flex-row items-center justify-center w-full h-full gap-2 ${isActive ? 'scale-105' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'} transition-all active:scale-95`}
+              style={isActive ? { color: item.color } : {}}
+            >
+              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'opacity-100' : ''} style={isActive ? { fill: `${item.color}20` } : {}} />
+              <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
     </div>
   );
