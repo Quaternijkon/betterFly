@@ -1836,10 +1836,10 @@ export default function App() {
               <button
                 key={item.id}
                 onClick={() => setView(item.id as any)}
-                className={`p-2 rounded-xl transition-all ${isActive ? 'dark:bg-gray-700' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                style={isActive ? { backgroundColor: `${item.color}15`, color: item.color } : {}}
+                className={`p-3 rounded-2xl transition-all duration-300 hover:scale-110 ${isActive ? '' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-60 hover:opacity-100'}`}
+                style={isActive ? { color: item.color, transform: 'scale(1.1)' } : {}}
               >
-                <item.icon size={24} />
+                <item.icon size={28} strokeWidth={isActive ? 2.5 : 2} />
               </button>
             );
           })}
@@ -2332,11 +2332,10 @@ export default function App() {
             <button
               key={item.id}
               onClick={() => setView(item.id as any)}
-              className={`flex flex-row items-center justify-center w-full h-full gap-2 ${isActive ? 'scale-105' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'} transition-all active:scale-95`}
+              className={`flex items-center justify-center w-full h-full ${isActive ? '' : 'text-gray-400 dark:text-gray-500'} transition-all active:scale-95`}
               style={isActive ? { color: item.color } : {}}
             >
-              <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'opacity-100' : ''} style={isActive ? { fill: `${item.color}20` } : {}} />
-              <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
+              <item.icon size={28} strokeWidth={isActive ? 2.5 : 2} style={isActive ? { filter: `drop-shadow(0 0 8px ${item.color}40)` } : {}} />
             </button>
           );
         })}
