@@ -1,4 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  Square, BarChart2, Clock, Settings, History, Edit2, Trash2, 
+  Save, X, Plus, LayoutGrid, CheckCircle2, Loader2, 
+  User as UserIcon, Activity, Filter, ChevronDown, Check, 
+  Calendar as CalendarIcon, Grid, List, Moon, Sun, Download, Upload,
+  TrendingUp, FileText, PlusCircle, Hash, Zap, Coffee, Maximize
+} from 'lucide-react';
 
 // --- Types (Offline Version) ---
 interface Goal {
@@ -27,7 +34,7 @@ interface Session {
 
 interface UserSettings {
   themeColor: string;
-  weekStart: number; // 0 Sun, 1 Mon
+  weekStart: number;
   stopMode: 'quick' | 'note';
   darkMode: boolean;
 }
@@ -67,8 +74,9 @@ const dateToInputString = (dateInput: string | Date | null) => {
   return (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
 };
 
-// --- Icons (Inline SVG) ---
-// Define Icon component locally to avoid external dependency issues
+// --- Sub-Components ---
+
+// Icons (Inline SVG to avoid external dependency issues)
 const Icon = ({ path, className, size = 24, ...props }: any) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
     {path}
@@ -107,10 +115,7 @@ const Icons = {
   Zap: (p: any) => <Icon path={<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />} {...p} />,
   Coffee: (p: any) => <Icon path={<><path d="M17 8h1a4 4 0 1 1 0 8h-1" /><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" /><line x1="6" x2="6" y1="2" y2="4" /><line x1="10" x2="10" y1="2" y2="4" /><line x1="14" x2="14" y1="2" y2="4" /></>} {...p} />,
   Maximize: (p: any) => <Icon path={<><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></>} {...p} />,
-  Loader2: (p: any) => <Icon path={<path d="M21 12a9 9 0 1 1-6.219-8.56" />} className={`${p.className || ''} animate-spin`} {...p} />,
 };
-
-// --- Sub-Components ---
 
 const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -603,8 +608,7 @@ export default function App() {
   const [stoppingSessionId, setStoppingSessionId] = useState<string | null>(null);
   const [stoppingNote, setStoppingNote] = useState('');
   const [newEventName, setNewEventName] = useState('');
-  const [newEventColor] = useState(DEFAULT_COLORS[0]);
-  const [loading, setLoading] = useState(true);
+  const [newEventColor, setNewEventColor] = useState(DEFAULT_COLORS[0]);
 
   // --- Persistence ---
   useEffect(() => {
@@ -620,7 +624,6 @@ export default function App() {
       }
       const storedSessions = localStorage.getItem(STORAGE_KEYS.SESSIONS);
       if (storedSessions) setSessions(JSON.parse(storedSessions));
-      setLoading(false);
     };
     loadData();
   }, []);
@@ -736,12 +739,12 @@ export default function App() {
     setStoppingSessionId(null); setStoppingNote('');
   };
 
-  // const handleCreateEvent = () => {
-  //   if (!newEventName.trim()) return;
-  //   const newEvent: EventType = { id: uuid(), name: newEventName.trim(), color: newEventColor, archived: false, createdAt: new Date().toISOString(), goal: null };
-  //   setEventTypes(prev => [...prev, newEvent]);
-  //   setNewEventName('');
-  // };
+  const handleCreateEvent = () => {
+    if (!newEventName.trim()) return;
+    const newEvent: EventType = { id: uuid(), name: newEventName.trim(), color: newEventColor, archived: false, createdAt: new Date().toISOString(), goal: null };
+    setEventTypes(prev => [...prev, newEvent]);
+    setNewEventName('');
+  };
 
   const handleUpdateEvent = (id: string, name: string, color: string, goal: Goal | null) => {
     setEventTypes(prev => prev.map(e => e.id === id ? { ...e, name, color, goal } : e));
@@ -770,32 +773,30 @@ export default function App() {
     setEditingSession(null);
   }
 
-  // const exportData = () => {
-  //   const data = { settings, eventTypes, sessions };
-  //   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-  //   const url = URL.createObjectURL(blob);
-  //   const a = document.createElement('a'); a.href = url; a.download = 'tracker_backup.json'; a.click();
-  // };
+  const exportData = () => {
+    const data = { settings, eventTypes, sessions };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'tracker_backup.json'; a.click();
+  };
 
-  // const importData = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const file = e.target.files?.[0];
-  //   if (!file) return;
-  //   const reader = new FileReader();
-  //   reader.onload = (evt) => {
-  //     try {
-  //       const data = JSON.parse(evt.target?.result as string);
-  //       if (confirm('导入将覆盖当前数据，确定吗？')) {
-  //          setSettings(data.settings);
-  //          setEventTypes(data.eventTypes);
-  //          setSessions(data.sessions);
-  //          alert('导入完成');
-  //       }
-  //     } catch (err) { alert('格式错误'); }
-  //   };
-  //   reader.readAsText(file);
-  // };
-
-  if (loading) return <div className="flex h-screen items-center justify-center dark:bg-gray-900 dark:text-white"><Icons.Loader2 className="animate-spin mr-2" /> 载入中...</div>;
+  const importData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = JSON.parse(evt.target?.result as string);
+        if (confirm('导入将覆盖当前数据，确定吗？')) {
+           setSettings(data.settings);
+           setEventTypes(data.eventTypes);
+           setSessions(data.sessions);
+           alert('导入完成');
+        }
+      } catch (err) { alert('格式错误'); }
+    };
+    reader.readAsText(file);
+  };
 
   return (
     <div className={`${settings.darkMode ? 'dark' : ''} fixed inset-0 w-full h-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans flex flex-col md:flex-row overflow-hidden`}>
@@ -948,6 +949,60 @@ export default function App() {
             </div>
 
             <DailyTimelineSpectrum sessions={sessions.filter(s => s.endTime && statsSelectedIds.includes(s.eventId!))} color={settings.themeColor} darkMode={settings.darkMode} />
+          </div>
+        )}
+
+        {view === 'settings' && (
+          <div className="max-w-2xl mx-auto animate-in fade-in pb-20">
+            <h1 className="text-2xl font-bold mb-8">设置与管理</h1>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+              <h3 className="font-bold text-sm mb-4">创建新事件</h3>
+              <div className="flex gap-2">
+                <input value={newEventName} onChange={e => setNewEventName(e.target.value)} placeholder="事件名称" className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 dark:text-white" />
+                <div className="flex gap-1">{DEFAULT_COLORS.slice(0, 4).map(c => <button key={c} onClick={() => setNewEventColor(c)} className={`w-8 h-8 rounded-full border-2 ${newEventColor === c ? 'border-gray-400 scale-110' : 'border-transparent'}`} style={{backgroundColor: c}} />)}</div>
+              </div>
+              <button onClick={handleCreateEvent} disabled={!newEventName} className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl disabled:opacity-50">创建</button>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+               <h3 className="font-bold text-sm mb-4">现有事件</h3>
+               <div className="space-y-2">
+                 {eventTypes.map(et => (
+                   <div key={et.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                     <div className="flex items-center gap-3">
+                       <div className="w-3 h-3 rounded-full" style={{backgroundColor: et.color}}/>
+                       <span className="dark:text-white font-medium">{et.name}</span>
+                       {et.goal && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">有目标</span>}
+                     </div>
+                     <button onClick={() => setEditingEventType(et)} className="text-sm text-blue-600 hover:underline">编辑</button>
+                   </div>
+                 ))}
+               </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6 space-y-6">
+               <h3 className="font-bold text-sm">通用设置</h3>
+               <div className="flex justify-between items-center">
+                 <span>深色模式</span>
+                 <button onClick={() => setSettings(s => ({...s, darkMode: !s.darkMode}))} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">{settings.darkMode ? <Icons.Moon size={18}/> : <Icons.Sun size={18}/>}</button>
+               </div>
+               <div className="flex justify-between items-center">
+                 <div><span>停止模式</span><div className="text-xs text-gray-400">选择填写备注的方式</div></div>
+                 <select value={settings.stopMode} onChange={e => setSettings(s => ({...s, stopMode: e.target.value as any}))} className="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg text-sm"><option value="quick">快速停止</option><option value="note">弹窗填写</option></select>
+               </div>
+               <div className="flex justify-between items-center">
+                 <span>日历起始</span>
+                 <button onClick={() => setSettings(s => ({...s, weekStart: s.weekStart === 1 ? 0 : 1}))} className="bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg text-sm">{settings.weekStart === 1 ? '周一' : '周日'}</button>
+               </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+               <h3 className="font-bold text-sm mb-4">数据管理</h3>
+               <div className="flex gap-4">
+                 <button onClick={exportData} className="flex-1 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 py-3 rounded-xl font-bold"><Icons.Download size={18}/> 导出</button>
+                 <label className="flex-1 flex items-center justify-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 py-3 rounded-xl font-bold cursor-pointer"><Icons.Upload size={18}/> 导入<input type="file" accept=".json" onChange={importData} className="hidden" /></label>
+               </div>
+            </div>
           </div>
         )}
 
