@@ -77,7 +77,33 @@ const MONTH_NAMES = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8�
 const STORAGE_KEYS = {
   SESSIONS: 'tracker_sessions',
   EVENTS: 'tracker_events',
-  SETTINGS: 'tracker_settings'
+  SETTINGS: 'tracker_settings',
+  PENDING_DELETES: 'tracker_pending_deletes'
+};
+
+interface PendingDeletes {
+  sessions: string[];
+  events: string[];
+}
+
+const getPendingDeletes = (): PendingDeletes => {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.PENDING_DELETES) || '{"sessions":[], "events":[]}');
+  } catch {
+    return { sessions: [], events: [] };
+  }
+};
+
+const addPendingDelete = (type: 'sessions' | 'events', id: string) => {
+  const pending = getPendingDeletes();
+  if (!pending[type].includes(id)) {
+    pending[type].push(id);
+    localStorage.setItem(STORAGE_KEYS.PENDING_DELETES, JSON.stringify(pending));
+  }
+};
+
+const clearPendingDeletes = () => {
+  localStorage.removeItem(STORAGE_KEYS.PENDING_DELETES);
 };
 
 // --- Utility Functions ---
@@ -150,37 +176,75 @@ const Icons = {
   CloudOff: (p: any) => <Icon path={<><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3" /><line x1="1" x2="23" y1="1" y2="23" /></>} {...p} />,
   LogOut: (p: any) => <Icon path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></>} {...p} />,
   Github: (p: any) => <Icon path={<><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" /><path d="M9 18c-4.51 2-5-2-7-2" /></>} {...p} />,
+  Google: (p: any) => <svg width={p.size || 24} height={p.size || 24} viewBox="0 0 24 24" className={p.className} {...p}><path fill="#EA4335" d="M24 12.276c0-.85-.076-1.668-.217-2.456H12v4.646h6.73c-.29 1.543-1.108 2.85-2.358 3.687l3.81 2.956c2.23-2.054 3.518-5.078 3.518-8.833z" /><path fill="#34A853" d="M12 24c3.24 0 5.958-1.074 7.942-2.906l-3.81-2.956c-1.075.72-2.45 1.146-4.132 1.146-3.125 0-5.772-2.11-6.72-4.952H1.363v3.116C3.388 21.432 7.42 24 12 24z" /><path fill="#FBBC05" d="M5.28 14.288c-.244-.73-.383-1.516-.383-2.32 0-.803.14-1.59.383-2.318V6.533H1.363C.493 8.27 0 10.076 0 12c0 1.924.492 3.73 1.363 5.385l3.917-3.097z" /><path fill="#4285F4" d="M12 4.774c1.763 0 3.35.607 4.595 1.795l3.447-3.447C17.955 1.22 15.236 0 12 0 7.42 0 3.388 2.568 1.363 6.534l3.917 3.097C6.228 6.883 8.875 4.774 12 4.774z" /></svg>,
+  Microsoft: (p: any) => <svg width={p.size || 24} height={p.size || 24} viewBox="0 0 23 23" className={p.className} {...p}><path fill="#f3f3f3" d="M0 0h23v23H0z" /><path fill="#f35325" d="M1 1h10v10H1z" /><path fill="#81bc06" d="M12 1h10v10H12z" /><path fill="#05a6f0" d="M1 12h10v10H1z" /><path fill="#ffba08" d="M12 12h10v10H12z" /></svg>,
   Star: (p: any) => <Icon path={<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />} {...p} />,
   Tag: (p: any) => <Icon path={<path d="M12 2H2v10l9.29 9.29a2.5 2.5 0 0 0 3.54 0l6.17-6.17a2.5 2.5 0 0 0 0-3.54L12 2z" />} {...p} />,
   Smile: (p: any) => <Icon path={<><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" x2="9.01" y1="9" y2="9" /><line x1="15" x2="15.01" y1="9" y2="9" /></>} {...p} />,
+  Scissors: (p: any) => <Icon path={<><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><line x1="20" x2="8.12" y1="4" y2="15.88" /><line x1="14.47" x2="20" y1="14.48" y2="20" /><line x1="8.12" x2="12" y1="8.12" y2="12" /></>} {...p} />,
+  UploadCloud: (p: any) => <Icon path={<><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><path d="M12 12v9" /><path d="m16 16-4-4-4 4" /></>} {...p} />,
+  ArrowRight: (p: any) => <Icon path={<path d="M5 12h14m-7-7 7 7-7 7" />} {...p} />,
 };
 
 // --- Sub-Components (Defined BEFORE App) ---
 
 const AuthModal = ({ onClose, onLoginSuccess }: { onClose: () => void, onLoginSuccess: () => void }) => {
-  const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Auto-register logic: Try login -> If UserNotFound -> Try Register
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
     try {
-      if (isRegister) {
-        await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
+      await signInWithEmailAndPassword(auth, email, password);
       onLoginSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.message.replace('Firebase: ', ''));
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        // Attempt registration
+        try {
+          // Basic check to differentiate "Wrong Password" from "No User" if API allows,
+          // but 'invalid-credential' is somewhat generic. 
+          // However, standard flow "Auto-register" usually implies: "We create if not exists".
+          // But if user exists and typed wrong password, we shouldn't create.
+          // `invalid-credential` covers both "user not found" and "wrong password" in modern firebase.
+          // So, we cannot easily distinguish without `fetchSignInMethodsForEmail` which is safer.
+
+          // Safer approach: Check existence first.
+          // const methods = await fetchSignInMethodsForEmail(auth, email); 
+          // (This is not always enabled for security).
+
+          // Let's rely on explicit error codes or fallback. 
+          // If it was a wrong password, createUser will fail with 'email-already-in-use'.
+          const userCred = await createUserWithEmailAndPassword(auth, email, password);
+          if (userCred.user) {
+            onLoginSuccess();
+            onClose();
+          }
+        } catch (regErr: any) {
+          if (regErr.code === 'auth/email-already-in-use') {
+            setError("账号已存在，密码错误？");
+          } else if (regErr.code === 'auth/weak-password') {
+            setError("密码太弱，请至少使用6位字符");
+          } else {
+            setError(regErr.message.replace('Firebase: ', ''));
+          }
+        }
+      } else {
+        setError(err.message.replace('Firebase: ', ''));
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSocialLogin = async (providerName: 'google' | 'github' | 'microsoft' | 'anonymous') => {
     setError('');
+    setIsLoading(true);
     try {
       let provider;
       if (providerName === 'google') provider = new GoogleAuthProvider();
@@ -195,47 +259,104 @@ const AuthModal = ({ onClose, onLoginSuccess }: { onClose: () => void, onLoginSu
       onLoginSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.message);
+      if (err.code === 'auth/account-exists-with-different-credential') {
+        setError("此邮箱已关联其他登录方式 (如 Google)，请使用该方式登录以合并账号。");
+      } else {
+        setError(err.message.replace('Firebase: ', ''));
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl border dark:border-gray-700">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold dark:text-white">账号登录 / 注册</h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full dark:text-gray-300"><Icons.X size={20} /></button>
-        </div>
+    <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-[#18181b] rounded-[32px] w-full max-w-[400px] shadow-2xl overflow-hidden relative">
+        {/* Header Design */}
+        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-blue-500/20 to-purple-500/20 dark:from-blue-900/40 dark:to-purple-900/40 pointer-events-none" />
 
-        {error && <div className="mb-4 p-3 bg-red-50 text-red-600 text-xs rounded-lg">{error}</div>}
+        <div className="relative p-8 pt-10">
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 mb-2">M.</div>
+              <h3 className="text-xl font-bold dark:text-white">Welcome Back</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">登录或自动注册账号</p>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-full transition-colors dark:text-gray-400">
+              <Icons.X size={20} />
+            </button>
+          </div>
 
-        <form onSubmit={handleEmailAuth} className="space-y-4 mb-6">
-          <input type="email" placeholder="邮箱地址" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-3 rounded-xl border bg-gray-50 border-gray-200 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 placeholder-gray-400" required />
-          <input type="password" placeholder="密码 (至少6位)" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-3 rounded-xl border bg-gray-50 border-gray-200 text-gray-900 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 placeholder-gray-400" required minLength={6} />
-          <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all">
-            {isRegister ? '注册新账号' : '登录'}
-          </button>
-        </form>
+          {error && (
+            <div className="mb-6 p-3 bg-red-50/50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-300 text-xs rounded-xl flex items-start gap-2">
+              <span className="mt-0.5" >⚠️</span> {error}
+            </div>
+          )}
 
-        <div className="text-center text-xs text-gray-400 mb-4 cursor-pointer hover:underline" onClick={() => setIsRegister(!isRegister)}>
-          {isRegister ? '已有账号？去登录' : '没有账号？去注册'}
-        </div>
+          {/* Social Login Blocks */}
+          <div className="space-y-3 mb-8">
+            <button onClick={() => handleSocialLogin('google')} className="w-full flex items-center justify-center gap-3 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group relative overflow-hidden bg-white dark:bg-transparent">
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-800 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="w-5 h-5 flex items-center justify-center relative z-10"><Icons.Google /></div>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 relative z-10">Google 继续</span>
+            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => handleSocialLogin('github')} className="flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:text-white hover:bg-[#24292e] dark:hover:bg-[#24292e] transition-all group bg-white dark:bg-transparent text-gray-700 dark:text-gray-200">
+                <Icons.Github size={20} />
+                <span className="text-sm font-semibold">GitHub</span>
+              </button>
+              <button onClick={() => handleSocialLogin('microsoft')} className="flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all bg-white dark:bg-transparent">
+                <div className="w-5 h-5 flex items-center justify-center"><Icons.Microsoft /></div>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Microsoft</span>
+              </button>
+            </div>
+          </div>
 
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t dark:border-gray-600"></div></div>
-          <div className="relative flex justify-center text-xs"><span className="px-2 bg-white dark:bg-gray-800 text-gray-500">或通过以下方式</span></div>
-        </div>
+          <div className="relative mb-8">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100 dark:border-gray-800"></div></div>
+            <div className="relative flex justify-center text-xs uppercase tracking-widest font-bold text-gray-400"><span className="px-3 bg-white dark:bg-[#18181b]">Or email</span></div>
+          </div>
 
-        <div className="grid grid-cols-4 gap-2">
-          <button onClick={() => handleSocialLogin('google')} className="p-2 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-center" title="Google"><span className="font-bold text-blue-500">G</span></button>
-          <button onClick={() => handleSocialLogin('github')} className="p-2 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-center" title="GitHub"><Icons.Github size={20} /></button>
-          <button onClick={() => handleSocialLogin('microsoft')} className="p-2 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-center" title="Microsoft"><span className="font-bold text-orange-500">M</span></button>
-          <button onClick={() => handleSocialLogin('anonymous')} className="p-2 border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 flex justify-center" title="匿名试用"><Icons.User size={20} /></button>
+          {/* Email Form */}
+          <form onSubmit={handleEmailAuth} className="space-y-3">
+            <div className="space-y-3">
+              <input
+                type="email"
+                placeholder="邮箱地址"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-blue-500/50 outline-none transition-all text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400"
+                required
+              />
+              <input
+                type="password"
+                placeholder="密码"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-blue-500/50 outline-none transition-all text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400"
+                required
+                minLength={6}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-4 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-100 text-white dark:text-black font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:hover:scale-100 flex items-center justify-center gap-2 mt-4"
+            >
+              {isLoading ? <Icons.Loader2 size={18} className="animate-spin" /> : <Icons.ArrowRight size={18} />}
+              <span>快速登录</span>
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <button onClick={() => handleSocialLogin('anonymous')} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">游客试用 &rarr;</button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+// Helper icon for button removed (moved to main Icons object)
 
 const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -1186,6 +1307,21 @@ export default function App() {
     setSyncing(true);
     try {
       const batch = writeBatch(db);
+      const pendingDeletes = getPendingDeletes();
+
+      // --- PHASE 0: PROCESS LOCAL DELETIONS (PUSH) ---
+      // We push local deletions to the server by setting a 'deleted' flag.
+      // This ensures other devices know to delete them too (Tombstone pattern).
+
+      const sRef = collection(db, 'users', user.uid, 'sessions');
+      const eRef = collection(db, 'users', user.uid, 'event_types');
+
+      pendingDeletes.sessions.forEach(id => {
+        batch.set(doc(sRef, id), { deleted: true, updatedAt: serverTimestamp() }, { merge: true });
+      });
+      pendingDeletes.events.forEach(id => {
+        batch.set(doc(eRef, id), { deleted: true, updatedAt: serverTimestamp() }, { merge: true });
+      });
 
       // --- A. SETTINGS SYNC ---
       const settingsRef = doc(db, 'users', user.uid, 'settings', 'preferences');
@@ -1201,25 +1337,24 @@ export default function App() {
       setSettings(finalSettings as UserSettings);
 
       // --- B. EVENTS SYNC ---
-      const eventsRef = collection(db, 'users', user.uid, 'event_types');
-      const serverEventsSnap = await getDocs(eventsRef);
+      const serverEventsSnap = await getDocs(eRef);
 
       // Map: ID -> Event
       const serverEventsMap = new Map();
-      serverEventsSnap.forEach(doc => serverEventsMap.set(doc.id, { ...doc.data(), id: doc.id }));
+      serverEventsSnap.forEach(doc => {
+        const data = doc.data();
+        // IGNORE deleted items from server (Tombstone check)
+        // If server says deleted, we will NOT add it to our list.
+        if (data.deleted) return;
+        serverEventsMap.set(doc.id, { ...data, id: doc.id });
+      });
+
       const localEventMap = new Map(eventTypes.map(e => [e.id, e]));
-
-      // Improved Event Merge Logic:
-      // 1. If server has it, use server's (assuming server is source of truth for conflict).
-      // 2. If server doesn't have it, but local does, it's a new event -> Push to server.
-      // 3. To fix "layout/settings not syncing": If local event has newer/different settings AND server doesn't exist, we push.
-      //    NOTE: Without 'updatedAt', we can't accept local changes to existing server events automatically safely.
-      //    However, to address user feedback "sync page layout/settings", we will push ALL local events that are missing on server.
-
       const finalEventsMap = new Map();
 
-      // 1. Load Server Events first
+      // 1. Load Server Events
       serverEventsMap.forEach((sEvent, id) => {
+        // If server has it (and not deleted), it wins
         finalEventsMap.set(id, {
           ...sEvent,
           createdAt: sEvent.createdAt?.toDate ? sEvent.createdAt.toDate().toISOString() : sEvent.createdAt
@@ -1228,23 +1363,28 @@ export default function App() {
 
       // 2. Push Local Events that don't exist on Server
       localEventMap.forEach((lEvent, id) => {
-        if (!finalEventsMap.has(id)) {
+        // Only push if NOT already on server AND NOT in pending deletes (obviously)
+        if (!finalEventsMap.has(id) && !pendingDeletes.events.includes(id)) {
+          // Double check: if server explicitly has it as deleted (we filtered it out above), should we revive it?
+          // Current logic: No. If server deleted it, it's gone.
+          // BUT, what if this is a NEW event with same ID? (Unlikely with UUID).
+          // Assume new.
+
+          // We need to check if the ID was in the server snapshot but filtered out as deleted.
+          const serverDoc = serverEventsSnap.docs.find(d => d.id === id);
+          if (serverDoc && serverDoc.data().deleted) {
+            // Server deleted it. Local has it. Who wins?
+            // Usually deletion wins. Remove from local.
+            return;
+          }
+
           finalEventsMap.set(id, lEvent);
           // Push to server
-          const ref = doc(eventsRef, id);
+          const ref = doc(eRef, id);
           batch.set(ref, {
             ...lEvent,
             createdAt: lEvent.createdAt ? Timestamp.fromDate(new Date(lEvent.createdAt)) : serverTimestamp()
           });
-        } else {
-          // OPTIONAL: If you want Local to overwrite Server for existing IDs (aka "Sync Local Settings to Cloud"),
-          // uncomment below. currently we stick to Server Priority to avoid data loss.
-          // For now, we assume user creates events locally -> they get pushed.
-          // If user changes color locally -> it won't sync if server ID exists.
-          // To fix this fully, we would need a timestamp comparison.
-          // Let's at least ensures fields that might be missing on server but present on local are added?
-          // (No, that's messy). 
-          // Let's trust the Server Priority for now as per original request "conflict server wins".
         }
       });
 
@@ -1255,10 +1395,14 @@ export default function App() {
 
 
       // --- C. SESSIONS SYNC ---
-      const sessionsRef = collection(db, 'users', user.uid, 'sessions');
-      const serverSessionsSnap = await getDocs(sessionsRef);
+      const serverSessionsSnap = await getDocs(sRef);
       const serverSessionsMap = new Map();
-      serverSessionsSnap.forEach(doc => serverSessionsMap.set(doc.id, { ...doc.data(), id: doc.id }));
+
+      serverSessionsSnap.forEach(doc => {
+        const data = doc.data();
+        if (data.deleted) return; // Ignore tombstones
+        serverSessionsMap.set(doc.id, { ...data, id: doc.id });
+      });
 
       const localSessionsMap = new Map(sessions.map(s => [s.id, s]));
       const finalSessionsMap = new Map();
@@ -1275,12 +1419,20 @@ export default function App() {
       // 2. Process Local Sessions
       localSessionsMap.forEach((lSession, id) => {
         if (!finalSessionsMap.has(id)) {
+          // Check if server has it marked as deleted
+          const serverDoc = serverSessionsSnap.docs.find(d => d.id === id);
+          if (serverDoc && serverDoc.data().deleted) {
+            return; // Server deleted it, remove locally
+          }
+
           finalSessionsMap.set(id, lSession);
           // Push to server
-          const ref = doc(sessionsRef, id);
+          const ref = doc(sRef, id);
           batch.set(ref, {
             eventId: lSession.eventId,
             note: lSession.note || '',
+            incomplete: lSession.incomplete || false,
+            rating: lSession.rating || 0,
             startTime: lSession.startTime ? Timestamp.fromDate(new Date(lSession.startTime)) : serverTimestamp(),
             endTime: lSession.endTime ? Timestamp.fromDate(new Date(lSession.endTime)) : null
           });
@@ -1293,10 +1445,120 @@ export default function App() {
 
 
       await batch.commit();
+      clearPendingDeletes(); // Success!
       alert("同步完成！数据已与服务器合并。");
     } catch (e: any) {
       console.error(e);
       alert("同步失败: " + e.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDeduplicate = () => {
+    if (!confirm("确定要执行去重操作吗？\n这将基于 [开始时间] 和 [事件ID] 删除完全重复的记录，只保留一份。")) return;
+
+    const contentSeen = new Set();
+    const uniqueSessions = sessions.filter(s => {
+      // Create a unique signature for the content
+      const key = `${s.eventId}-${s.startTime}-${s.endTime}`;
+      if (contentSeen.has(key)) return false;
+      contentSeen.add(key);
+      return true;
+    });
+
+    const removedCount = sessions.length - uniqueSessions.length;
+    if (removedCount === 0) {
+      alert("未发现重复记录。");
+      return;
+    }
+
+    setSessions(uniqueSessions);
+    alert(`成功删除了 ${removedCount} 条重复记录。\n请记得点击 [覆盖云端数据] 以将清理后的状态同步到服务器！`);
+  };
+
+  const handleOverwriteCloud = async () => {
+    if (!user) return alert("请先登录");
+    if (!confirm("⚠️ 高危操作警告 ⚠️\n\n这将【清除服务器上的所有数据】并上传您当前的本地数据。\n\n请确认：\n1. 您当前的本地数据是正确的（已去重）。\n2. 您希望彻底重置云端状态。\n\n是否继续？")) return;
+
+    setSyncing(true);
+    try {
+      // 1. Delete all server data (Sessions & Events)
+      // Note: Firestore requires deleting docs individually or via batch.
+      const batchDelete = writeBatch(db);
+      const sRef = collection(db, 'users', user.uid, 'sessions');
+      const eRef = collection(db, 'users', user.uid, 'event_types');
+
+      const [sSnaps, eSnaps] = await Promise.all([getDocs(sRef), getDocs(eRef)]);
+
+      let opCount = 0;
+      const MAX_BATCH = 400;
+
+      const commitBatchIfFull = async (b: any) => {
+        if (opCount >= MAX_BATCH) {
+          await b.commit();
+          opCount = 0;
+          return writeBatch(db);
+        }
+        return b;
+      };
+
+      let currentBatch = batchDelete;
+
+      for (const doc of sSnaps.docs) {
+        currentBatch.delete(doc.ref);
+        opCount++;
+        currentBatch = await commitBatchIfFull(currentBatch);
+      }
+      for (const doc of eSnaps.docs) {
+        currentBatch.delete(doc.ref);
+        opCount++;
+        currentBatch = await commitBatchIfFull(currentBatch);
+      }
+
+      await currentBatch.commit(); // Commit remaining deletions
+
+      // 2. Upload Local Data
+      let uploadBatch = writeBatch(db);
+      opCount = 0;
+      currentBatch = uploadBatch; // reset for upload
+
+      // Upload Events
+      for (const e of eventTypes) {
+        const ref = doc(eRef, e.id);
+        currentBatch.set(ref, {
+          ...e,
+          createdAt: e.createdAt ? Timestamp.fromDate(new Date(e.createdAt)) : serverTimestamp()
+        });
+        opCount++;
+        currentBatch = await commitBatchIfFull(currentBatch);
+      }
+
+      // Upload Sessions
+      for (const s of sessions) {
+        const ref = doc(sRef, s.id);
+        currentBatch.set(ref, {
+          eventId: s.eventId,
+          note: s.note || '',
+          incomplete: s.incomplete || false,
+          rating: s.rating || 0,
+          startTime: s.startTime ? Timestamp.fromDate(new Date(s.startTime)) : serverTimestamp(),
+          endTime: s.endTime ? Timestamp.fromDate(new Date(s.endTime)) : null
+        });
+        opCount++;
+        currentBatch = await commitBatchIfFull(currentBatch);
+      }
+
+      // Upload Settings
+      const settingsRef = doc(db, 'users', user.uid, 'settings', 'preferences');
+      currentBatch.set(settingsRef, settings, { merge: true });
+
+      await currentBatch.commit();
+
+      alert("云端数据已成功重置为当前本地状态。");
+    } catch (e: any) {
+      console.error(e);
+      alert("操作失败: " + e.message);
     } finally {
       setSyncing(false);
     }
@@ -1343,6 +1605,13 @@ export default function App() {
       setEditingEventType(null);
       return;
     }
+    if (!confirm('确定要删除这个事件类型吗？这将同时删除所有关联的记录。')) return;
+
+    addPendingDelete('events', id);
+    // Find all sessions using this event and mark them as deleted too
+    const relatedSessionIds = sessions.filter(s => s.eventId === id).map(s => s.id);
+    relatedSessionIds.forEach(sid => addPendingDelete('sessions', sid));
+
     setEventTypes(prev => prev.filter(e => e.id !== id));
     setSessions(prev => prev.filter(s => s.eventId !== id));
     setEditingEventType(null);
@@ -1360,6 +1629,8 @@ export default function App() {
   };
 
   const handleDeleteSession = async (id: string) => {
+    if (!confirm('确定要删除这条记录吗？')) return;
+    addPendingDelete('sessions', id);
     setSessions(prev => prev.filter(s => s.id !== id));
     setEditingSession(null);
   };
@@ -1861,6 +2132,19 @@ export default function App() {
                       <Icons.Trash2 size={16} /> <span>清空本地数据</span>
                     </button>
                   </div>
+
+                  <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">高级修复工具</div>
+                    <div className="flex gap-2">
+                      <button onClick={handleDeduplicate} className="flex-1 flex items-center justify-center gap-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 py-2 rounded-xl text-sm font-bold">
+                        <Icons.Scissors size={16} /> <span>去除重复</span>
+                      </button>
+                      <button onClick={handleOverwriteCloud} className="flex-1 flex items-center justify-center gap-2 bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 py-2 rounded-xl text-sm font-bold">
+                        <Icons.UploadCloud size={16} /> <span>覆盖云端</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <button onClick={() => signOut(auth)} className="w-full mt-2 flex items-center justify-center gap-2 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 px-4 py-2 rounded-xl text-sm text-gray-600 dark:text-gray-300 transition-colors">
                     <Icons.LogOut size={16} /> 退出登录
                   </button>
