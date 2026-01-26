@@ -603,7 +603,7 @@ export default function App() {
   const [stoppingSessionId, setStoppingSessionId] = useState<string | null>(null);
   const [stoppingNote, setStoppingNote] = useState('');
   const [newEventName, setNewEventName] = useState('');
-  const [newEventColor, setNewEventColor] = useState(DEFAULT_COLORS[0]);
+  const [newEventColor] = useState(DEFAULT_COLORS[0]);
   const [loading, setLoading] = useState(true);
 
   // --- Persistence ---
@@ -736,12 +736,12 @@ export default function App() {
     setStoppingSessionId(null); setStoppingNote('');
   };
 
-  const handleCreateEvent = () => {
-    if (!newEventName.trim()) return;
-    const newEvent: EventType = { id: uuid(), name: newEventName.trim(), color: newEventColor, archived: false, createdAt: new Date().toISOString(), goal: null };
-    setEventTypes(prev => [...prev, newEvent]);
-    setNewEventName('');
-  };
+  // const handleCreateEvent = () => {
+  //   if (!newEventName.trim()) return;
+  //   const newEvent: EventType = { id: uuid(), name: newEventName.trim(), color: newEventColor, archived: false, createdAt: new Date().toISOString(), goal: null };
+  //   setEventTypes(prev => [...prev, newEvent]);
+  //   setNewEventName('');
+  // };
 
   const handleUpdateEvent = (id: string, name: string, color: string, goal: Goal | null) => {
     setEventTypes(prev => prev.map(e => e.id === id ? { ...e, name, color, goal } : e));
@@ -770,30 +770,30 @@ export default function App() {
     setEditingSession(null);
   }
 
-  const exportData = () => {
-    const data = { settings, eventTypes, sessions };
-    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'tracker_backup.json'; a.click();
-  };
+  // const exportData = () => {
+  //   const data = { settings, eventTypes, sessions };
+  //   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  //   const url = URL.createObjectURL(blob);
+  //   const a = document.createElement('a'); a.href = url; a.download = 'tracker_backup.json'; a.click();
+  // };
 
-  const importData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = JSON.parse(evt.target?.result as string);
-        if (confirm('导入将覆盖当前数据，确定吗？')) {
-           setSettings(data.settings);
-           setEventTypes(data.eventTypes);
-           setSessions(data.sessions);
-           alert('导入完成');
-        }
-      } catch (err) { alert('格式错误'); }
-    };
-    reader.readAsText(file);
-  };
+  // const importData = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
+  //   const reader = new FileReader();
+  //   reader.onload = (evt) => {
+  //     try {
+  //       const data = JSON.parse(evt.target?.result as string);
+  //       if (confirm('导入将覆盖当前数据，确定吗？')) {
+  //          setSettings(data.settings);
+  //          setEventTypes(data.eventTypes);
+  //          setSessions(data.sessions);
+  //          alert('导入完成');
+  //       }
+  //     } catch (err) { alert('格式错误'); }
+  //   };
+  //   reader.readAsText(file);
+  // };
 
   if (loading) return <div className="flex h-screen items-center justify-center dark:bg-gray-900 dark:text-white"><Icons.Loader2 className="animate-spin mr-2" /> 载入中...</div>;
 
