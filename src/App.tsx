@@ -1253,8 +1253,9 @@ export default function App() {
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [editingEventType, setEditingEventType] = useState<EventType | null>(null);
   const [isAddMode, setIsAddMode] = useState(false);
-  const [stopMode, setStopMode] = useState<'quick' | 'note' | 'interactive'>('quick'); // Deprecated/Moved to settings but keeping for compat if needed, actually using settings.stopMode
-
+  const [stoppingSessionId, setStoppingSessionId] = useState<string | null>(null);
+  const [stoppingNote, setStoppingNote] = useState('');
+  
   const themeRgb = useMemo(() => hexToRgb(settings.themeColor), [settings.themeColor]);
 
   // 1. Auth Listener
