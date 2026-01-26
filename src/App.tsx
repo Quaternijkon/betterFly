@@ -7,7 +7,7 @@ import {
   TrendingUp, FileText, PlusCircle, Hash, Zap, Coffee, Maximize
 } from 'lucide-react';
 
-// --- Types (Offline Version) ---
+// --- Types ---
 interface Goal {
   type: 'positive' | 'negative';
   metric: 'count' | 'duration';
@@ -34,7 +34,7 @@ interface Session {
 
 interface UserSettings {
   themeColor: string;
-  weekStart: number; // 0 Sun, 1 Mon
+  weekStart: number;
   stopMode: 'quick' | 'note';
   darkMode: boolean;
 }
@@ -76,7 +76,6 @@ const dateToInputString = (dateInput: string | Date | null) => {
 
 // --- Sub-Components ---
 
-// Multi-Select Dropdown
 const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -101,13 +100,15 @@ const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
 
   return (
     <div className="relative z-30" ref={containerRef}>
-      <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-sm font-medium hover:border-blue-300 transition-colors shadow-sm dark:text-gray-200">
-        <Filter size={16} className="text-gray-500 dark:text-gray-400" />
-        <span>{label} ({selectedIds.length})</span>
+      <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-sm font-medium hover:border-blue-300 transition-colors shadow-sm dark:text-gray-200 w-full md:w-auto justify-between md:justify-start">
+        <div className="flex items-center gap-2">
+          <Filter size={16} className="text-gray-500 dark:text-gray-400" />
+          <span>{label} ({selectedIds.length})</span>
+        </div>
         <ChevronDown size={14} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-xl p-2 max-h-80 overflow-y-auto">
+        <div className="absolute right-0 top-full mt-2 w-full md:w-64 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-xl p-2 max-h-60 overflow-y-auto z-50">
           <button onClick={toggleAll} className="flex items-center gap-2 w-full p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">
             <div className={`w-4 h-4 border rounded flex items-center justify-center ${selectedIds.length === options.length ? 'bg-blue-600 border-blue-600' : 'border-gray-300 dark:border-gray-500'}`}>
               {selectedIds.length === options.length && <Check size={10} className="text-white" />}
@@ -130,7 +131,6 @@ const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
   );
 };
 
-// Trend Chart
 const TrendChart = ({ data, events, metric, darkMode }: any) => {
   const height = 300;
   const width = 800;
@@ -155,7 +155,7 @@ const TrendChart = ({ data, events, metric, darkMode }: any) => {
 
   return (
     <div className="w-full">
-      <div className="w-full overflow-x-auto">
+      <div className="w-full overflow-x-auto pb-4">
         <div className="min-w-[600px]">
           <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto font-sans">
             {[0, 0.25, 0.5, 0.75, 1].map(t => {
@@ -179,11 +179,11 @@ const TrendChart = ({ data, events, metric, darkMode }: any) => {
           </svg>
         </div>
       </div>
-      <div className="flex flex-wrap gap-4 mt-4 justify-center">
+      <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center px-2">
         {lines.map((l: any) => (
-          <div key={l.id} className="flex items-center gap-2 text-xs">
-            <div className="w-3 h-1 rounded-full" style={{ backgroundColor: l.color }} />
-            <span className="text-gray-600 dark:text-gray-300">{l.name}</span>
+          <div key={l.id} className="flex items-center gap-1.5 text-xs">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: l.color }} />
+            <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap">{l.name}</span>
           </div>
         ))}
       </div>
@@ -191,8 +191,7 @@ const TrendChart = ({ data, events, metric, darkMode }: any) => {
   );
 };
 
-// Timeline Spectrum
-const DailyTimelineSpectrum = ({ sessions, color }: any) => {
+const DailyTimelineSpectrum = ({ sessions, color, darkMode }: any) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -254,7 +253,6 @@ const DailyTimelineSpectrum = ({ sessions, color }: any) => {
   );
 };
 
-// Heatmap
 const HeatmapCalendar = ({ dataMap, color, title, unit, weekStart = 1, darkMode }: any) => {
   const [viewMode, setViewMode] = useState<'git' | 'year' | 'calendar'>('git');
   
@@ -309,7 +307,7 @@ const HeatmapCalendar = ({ dataMap, color, title, unit, weekStart = 1, darkMode 
     const year = new Date().getFullYear();
     const months = Array.from({length: 12}, (_, i) => i);
     return (
-      <div className="space-y-1 overflow-x-auto">
+      <div className="space-y-1 overflow-x-auto pb-2">
         {months.map(month => {
           const daysInMonth = new Date(year, month + 1, 0).getDate();
           const days = Array.from({length: daysInMonth}, (_, i) => i + 1);
@@ -338,7 +336,7 @@ const HeatmapCalendar = ({ dataMap, color, title, unit, weekStart = 1, darkMode 
     const weekDays = weekStart === 1 ? ['一', '二', '三', '四', '五', '六', '日'] : ['日', '一', '二', '三', '四', '五', '六'];
 
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
         {months.map(month => {
           const firstDay = new Date(year, month, 1);
           const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -389,7 +387,6 @@ const HeatmapCalendar = ({ dataMap, color, title, unit, weekStart = 1, darkMode 
   );
 };
 
-// Goal Ring
 const GoalRing = ({ goal, current, color, timeProgress }: any) => {
   const r1 = 18, r2 = 24;
   const c1 = 2 * Math.PI * r1, c2 = 2 * Math.PI * r2;
@@ -421,15 +418,14 @@ const GoalRing = ({ goal, current, color, timeProgress }: any) => {
   );
 };
 
-// Edit Event Modal
 const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
   const [name, setName] = useState(eventType.name);
   const [color, setColor] = useState(eventType.color);
   const [goal, setGoal] = useState<Goal | null>(eventType.goal || null);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl border dark:border-gray-700">
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md max-h-[90dvh] overflow-y-auto shadow-2xl border dark:border-gray-700">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold dark:text-white">编辑事件</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full dark:text-gray-300"><X size={20} /></button>
@@ -469,7 +465,6 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
   );
 };
 
-// Edit Session Modal
 const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMode }: any) => {
   const [start, setStart] = useState(session?.startTime ? dateToInputString(session.startTime) : dateToInputString(new Date()));
   const [end, setEnd] = useState(session?.endTime ? dateToInputString(session.endTime) : '');
@@ -486,8 +481,8 @@ const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMod
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl border dark:border-gray-700">
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md max-h-[90dvh] overflow-y-auto shadow-2xl border dark:border-gray-700">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold dark:text-white">{isAddMode ? '补录记录' : '编辑记录'}</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full dark:text-gray-300"><X size={20} /></button>
@@ -526,7 +521,6 @@ const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMod
   );
 };
 
-// Ongoing Card
 const OngoingSessionCard = ({ session, eventType, onStop }: any) => {
   const [duration, setDuration] = useState(0);
   useEffect(() => {
@@ -764,230 +758,261 @@ export default function App() {
   };
 
   return (
-    <div className={`${settings.darkMode ? 'dark' : ''} min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans flex flex-col md:flex-row max-w-7xl mx-auto shadow-2xl overflow-hidden`}>
-      <div className="w-full md:w-20 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 flex md:flex-col items-center justify-between py-4 px-6 md:px-0 z-10 sticky top-0">
-        <div className="font-bold text-xl text-blue-600 dark:text-blue-400">M.</div>
-        <nav className="flex md:flex-col gap-6">
+    <div className={`${settings.darkMode ? 'dark' : ''} h-dvh w-full bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans flex flex-col md:flex-row overflow-hidden`}>
+      
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-20 flex-col items-center border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-6 z-20">
+        <div className="mb-8 font-bold text-xl text-blue-600 dark:text-blue-400">M.</div>
+        <nav className="flex flex-col gap-6 w-full px-2">
           {[{ id: 'home', icon: LayoutGrid }, { id: 'history', icon: History }, { id: 'stats', icon: BarChart2 }, { id: 'settings', icon: Settings }].map(item => (
-            <button key={item.id} onClick={() => setView(item.id as any)} className={`p-2 rounded-xl transition-all ${view === item.id ? 'bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}><item.icon size={24} /></button>
+            <button key={item.id} onClick={() => setView(item.id as any)} className={`p-3 rounded-xl transition-all flex justify-center ${view === item.id ? 'bg-blue-50 dark:bg-gray-700 text-blue-600 dark:text-blue-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
+              <item.icon size={24} />
+            </button>
           ))}
         </nav>
-        <div className="hidden md:block pb-4"><div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><UserIcon size={16} className="text-gray-400" /></div></div>
-      </div>
+      </aside>
 
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto h-[calc(100vh-80px)] md:h-screen relative scroll-smooth">
-        
-        {view === 'home' && (
-          <div className="max-w-4xl mx-auto animate-in fade-in">
-            <header className="mb-8"><h1 className="text-2xl font-bold">仪表盘</h1></header>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-12">
-              {eventTypes.filter(e => !e.archived).map(et => {
-                const isActive = activeEventIds.has(et.id);
-                const goalStat = getGoalStatus(et);
-                const stats = calculateStats(sessions.filter(s => s.eventId === et.id));
-                return (
-                  <button key={et.id} onClick={() => handleStart(et.id)} disabled={isActive} className={`group relative p-4 rounded-2xl border transition-all text-left overflow-hidden h-40 flex flex-col justify-between ${isActive ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-700 opacity-80 cursor-not-allowed' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800'}`}>
-                    <div className="flex justify-between items-start w-full">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: et.color }} />
-                      {goalStat && <GoalRing goal={et.goal} current={goalStat.current} color={et.color} timeProgress={goalStat.timeProgress} />}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-800 dark:text-gray-100 truncate">{et.name}</h3>
-                      <div className="flex gap-2 mt-1">
-                        {isActive ? <span className="text-[10px] text-green-600 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full flex items-center gap-1"><Activity size={8} /> 进行中</span> :
-                          stats.currentStreak > 0 ? <span className="text-[10px] text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded-full flex items-center gap-1"><Zap size={8} /> 连胜 {stats.currentStreak}天</span> :
-                          <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-full flex items-center gap-1"><Coffee size={8} /> 中断 {stats.currentGap}天</span>}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-              <button onClick={() => setView('settings')} className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all text-gray-400 h-40"><Plus size={24} /><span className="text-xs font-medium mt-2">添加</span></button>
-            </div>
-            {activeSessions.length > 0 && (
-              <div className="animate-in slide-in-from-bottom-4">
-                <div className="flex items-center gap-2 mb-4 text-gray-400 text-sm font-bold uppercase tracking-wider"><Activity size={14} /> 进行中</div>
-                <div className="space-y-3">
-                  {activeSessions.map(s => <OngoingSessionCard key={s.id} session={s} eventType={eventTypes.find(e => e.id === s.eventId)} onStop={() => settings.stopMode === 'quick' ? handleStop(s.id, '') : setStoppingSessionId(s.id)} />)}
-                </div>
-              </div>
-            )}
+      {/* Main Content Area */}
+      <main className="flex-1 h-full overflow-y-auto overflow-x-hidden relative scroll-smooth">
+        <div className="p-4 md:p-8 pb-24 md:pb-8 max-w-6xl mx-auto">
+          
+          {/* Header for Mobile (Optional, can be integrated into views) */}
+          <div className="md:hidden flex justify-between items-center mb-6">
+             <div className="font-bold text-xl text-blue-600 dark:text-blue-400">M.</div>
+             {/* User Icon or Settings shortcut could go here */}
           </div>
-        )}
 
-        {view === 'history' && (
-          <div className="max-w-4xl mx-auto animate-in fade-in pb-20">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold">历史记录</h1>
-              <div className="flex gap-2">
-                 <button onClick={() => { setEditingSession(null); setIsAddMode(true); }} className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-bold shadow-sm transition-all"><PlusCircle size={16}/> 补录</button>
-                 <MultiSelectFilter options={eventTypes} selectedIds={historySelectedIds} onChange={setHistorySelectedIds} label="筛选" />
-              </div>
-            </div>
-            <div className="space-y-3">
-              {sessions.filter(s => s.eventId && historySelectedIds.includes(s.eventId)).map(s => {
-                 const et = eventTypes.find(e => e.id === s.eventId);
-                 const duration = !s.endTime ? (Date.now()-new Date(s.startTime).getTime())/1000 : ((new Date(s.endTime).getTime())-(new Date(s.startTime).getTime()))/1000;
-                 return (
-                  <div key={s.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-center justify-between group hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
-                    <div className="flex items-start gap-4">
-                      <div className="mt-1 w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: et?.color }} />
+          {view === 'home' && (
+            <div className="animate-in fade-in space-y-8">
+              <header>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">仪表盘</h1>
+                <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base">追踪你的习惯与目标</p>
+              </header>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {eventTypes.filter(e => !e.archived).map(et => {
+                  const isActive = activeEventIds.has(et.id);
+                  const goalStat = getGoalStatus(et);
+                  const stats = calculateStats(sessions.filter(s => s.eventId === et.id));
+                  return (
+                    <button key={et.id} onClick={() => handleStart(et.id)} disabled={isActive} className={`group relative p-5 rounded-2xl border transition-all text-left overflow-hidden h-36 flex flex-col justify-between shadow-sm ${isActive ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-700 opacity-80 cursor-not-allowed' : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800 active:scale-[0.98]'}`}>
+                      <div className="flex justify-between items-start w-full">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: et.color }} />
+                        {goalStat && <GoalRing goal={et.goal} current={goalStat.current} color={et.color} timeProgress={goalStat.timeProgress} />}
+                      </div>
                       <div>
-                        <div className="flex items-center gap-2 mb-1"><span className="font-bold text-gray-800 dark:text-gray-200">{et?.name}</span>{!s.endTime && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-md font-bold">进行中</span>}</div>
-                        <div className="font-mono text-sm text-gray-600 dark:text-gray-400 mb-1">{formatDuration(duration)}</div>
-                        <div className="text-xs text-gray-400">{new Date(s.startTime).toLocaleString()} {s.endTime ? ` - ${new Date(s.endTime).toLocaleTimeString()}` : ''}</div>
-                        {s.note && <div className="mt-2 text-xs text-gray-500 bg-gray-50 dark:bg-gray-700/50 p-2 rounded italic"><FileText size={10} className="inline mr-1"/>{s.note}</div>}
+                        <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100 truncate pr-8">{et.name}</h3>
+                        <div className="flex gap-2 mt-1.5">
+                          {isActive ? <span className="text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full flex items-center gap-1.5"><Activity size={12} /> 进行中</span> :
+                            stats.currentStreak > 0 ? <span className="text-xs font-medium text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded-full flex items-center gap-1.5"><Zap size={12} /> 连胜 {stats.currentStreak}天</span> :
+                            <span className="text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full flex items-center gap-1.5"><Coffee size={12} /> 中断 {stats.currentGap}天</span>}
+                        </div>
                       </div>
-                    </div>
-                    <button onClick={() => { setEditingSession(s); setIsAddMode(false); }} className="p-2 text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg"><Edit2 size={16} /></button>
-                  </div>
-                 );
-              })}
-            </div>
-          </div>
-        )}
-
-        {view === 'stats' && (
-          <div className="max-w-5xl mx-auto animate-in fade-in pb-20">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-              <h1 className="text-2xl font-bold">趋势与分析</h1>
-              <div className="flex gap-2 items-center">
-                <div className="flex bg-white dark:bg-gray-800 p-1 rounded-xl border dark:border-gray-700 shadow-sm">
-                  {['day', 'week', 'month'].map(p => <button key={p} onClick={() => setTrendPeriod(p as any)} className={`px-3 py-1.5 text-xs font-bold rounded-lg uppercase ${trendPeriod === p ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400'}`}>{p === 'day' ? '日' : p === 'week' ? '周' : '月'}</button>)}
-                </div>
-                <MultiSelectFilter options={eventTypes} selectedIds={statsSelectedIds} onChange={setStatsSelectedIds} label="事件" />
+                    </button>
+                  );
+                })}
+                <button onClick={() => setView('settings')} className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all text-gray-400 h-36 active:scale-[0.98]">
+                  <Plus size={24} /><span className="text-sm font-medium mt-2">添加事件</span>
+                </button>
               </div>
-            </div>
 
-            {/* Detailed Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              {statsSelectedIds.length > 1 && (
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm border-l-4 border-l-gray-500">
-                  <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2"><CheckCircle2 size={16} className="text-gray-500"/> 合并统计</h4>
-                  {(() => {
-                    const stats = calculateStats(sessions.filter(s => s.eventId && statsSelectedIds.includes(s.eventId)));
-                    return (
-                      <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                        <div className="flex justify-between"><span>总次数</span><span className="font-mono font-bold dark:text-white">{stats.totalCount}</span></div>
-                        <div className="flex justify-between"><span>总时长</span><span className="font-mono font-bold dark:text-white">{(stats.totalDuration/3600).toFixed(1)}h</span></div>
-                        <div className="flex justify-between"><span>最长连胜</span><span className="font-mono font-bold dark:text-white">{stats.maxStreak}天</span></div>
-                        <div className="flex justify-between"><span>最长中断</span><span className="font-mono font-bold dark:text-white">{stats.maxGap}天</span></div>
-                      </div>
-                    );
-                  })()}
+              {activeSessions.length > 0 && (
+                <div className="animate-in slide-in-from-bottom-4 pt-4">
+                  <div className="flex items-center gap-2 mb-4 text-gray-400 text-xs font-bold uppercase tracking-wider"><Activity size={14} /> 进行中</div>
+                  <div className="space-y-3">
+                    {activeSessions.map(s => <OngoingSessionCard key={s.id} session={s} eventType={eventTypes.find(e => e.id === s.eventId)} onStop={() => settings.stopMode === 'quick' ? handleStop(s.id, '') : setStoppingSessionId(s.id)} />)}
+                  </div>
                 </div>
               )}
-              {eventTypes.filter(e => statsSelectedIds.includes(e.id)).map(et => {
-                const stats = calculateStats(sessions.filter(s => s.eventId === et.id));
-                return (
-                  <div key={et.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm" style={{ borderLeft: `4px solid ${et.color}` }}>
-                    <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-3 flex items-center gap-2">{et.name}</h4>
-                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="flex justify-between items-center"><span className="flex gap-1 items-center"><Hash size={12}/> 总次数</span><span className="font-mono font-bold dark:text-white">{stats.totalCount}</span></div>
-                      <div className="flex justify-between items-center"><span className="flex gap-1 items-center"><Clock size={12}/> 总时长</span><span className="font-mono font-bold dark:text-white">{(stats.totalDuration/3600).toFixed(1)}h</span></div>
-                      <div className="flex justify-between items-center"><span className="flex gap-1 items-center"><Zap size={12}/> 最长连胜</span><span className="font-mono font-bold dark:text-white">{stats.maxStreak}天</span></div>
-                      <div className="flex justify-between items-center"><span className="flex gap-1 items-center"><Maximize size={12}/> 最长中断</span><span className="font-mono font-bold dark:text-white">{stats.maxGap}天</span></div>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
+          )}
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold flex items-center gap-2"><TrendingUp size={18}/> 趋势图</h3>
-                <div className="flex gap-2">
-                   <button onClick={() => setTrendMetric('duration')} className={`px-2 py-1 text-xs rounded ${trendMetric === 'duration' ? 'bg-gray-100 dark:bg-gray-700 font-bold' : 'text-gray-400'}`}>时长</button>
-                   <button onClick={() => setTrendMetric('count')} className={`px-2 py-1 text-xs rounded ${trendMetric === 'count' ? 'bg-gray-100 dark:bg-gray-700 font-bold' : 'text-gray-400'}`}>次数</button>
+          {view === 'history' && (
+            <div className="max-w-4xl mx-auto animate-in fade-in space-y-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <h1 className="text-2xl font-bold">历史记录</h1>
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                   <button onClick={() => { setEditingSession(null); setIsAddMode(true); }} className="flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all"><PlusCircle size={18}/> 补录</button>
+                   <div className="w-full sm:w-auto"><MultiSelectFilter options={eventTypes} selectedIds={historySelectedIds} onChange={setHistorySelectedIds} label="筛选" /></div>
                 </div>
               </div>
-              <TrendChart data={trendData} events={eventTypes.filter(e => statsSelectedIds.includes(e.id))} metric={trendMetric} period={trendPeriod} darkMode={settings.darkMode} />
+              <div className="space-y-3">
+                {sessions.filter(s => s.eventId && historySelectedIds.includes(s.eventId)).map(s => {
+                   const et = eventTypes.find(e => e.id === s.eventId);
+                   const duration = !s.endTime ? (Date.now()-new Date(s.startTime).getTime())/1000 : ((new Date(s.endTime).getTime())-(new Date(s.startTime).getTime()))/1000;
+                   return (
+                    <div key={s.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between group gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className="mt-1 w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: et?.color }} />
+                        <div>
+                          <div className="flex items-center gap-2 mb-1"><span className="font-bold text-gray-800 dark:text-gray-200">{et?.name}</span>{!s.endTime && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-md font-bold">进行中</span>}</div>
+                          <div className="font-mono text-sm text-gray-600 dark:text-gray-400 mb-1">{formatDuration(duration)}</div>
+                          <div className="text-xs text-gray-400">{new Date(s.startTime).toLocaleString()} {s.endTime ? ` - ${new Date(s.endTime).toLocaleTimeString()}` : ''}</div>
+                          {s.note && <div className="mt-2 text-xs text-gray-500 bg-gray-50 dark:bg-gray-700/50 p-2 rounded italic break-words"><FileText size={10} className="inline mr-1"/>{s.note}</div>}
+                        </div>
+                      </div>
+                      <button onClick={() => { setEditingSession(s); setIsAddMode(false); }} className="p-2 text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-50 sm:bg-transparent rounded-lg self-end sm:self-center"><Edit2 size={18} /></button>
+                    </div>
+                   );
+                })}
+              </div>
             </div>
+          )}
 
-            <div className="space-y-6 mb-6">
+          {view === 'stats' && (
+            <div className="max-w-5xl mx-auto animate-in fade-in space-y-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h1 className="text-2xl font-bold">趋势与分析</h1>
+                <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full md:w-auto">
+                  <div className="flex bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm w-full sm:w-auto">
+                    {['day', 'week', 'month'].map(p => <button key={p} onClick={() => setTrendPeriod(p as any)} className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-bold rounded-lg uppercase transition-all ${trendPeriod === p ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>{p === 'day' ? '日' : p === 'week' ? '周' : '月'}</button>)}
+                  </div>
+                  <div className="w-full sm:w-auto"><MultiSelectFilter options={eventTypes} selectedIds={statsSelectedIds} onChange={setStatsSelectedIds} label="事件" /></div>
+                </div>
+              </div>
+
+              {/* Detailed Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {statsSelectedIds.length > 1 && (
+                  <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm border-l-4 border-l-gray-500">
+                    <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2"><CheckCircle2 size={18} className="text-gray-500"/> 合并统计</h4>
+                    {(() => {
+                      const stats = calculateStats(sessions.filter(s => s.eventId && statsSelectedIds.includes(s.eventId)));
+                      return (
+                        <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                          <div className="flex justify-between items-center"><span>总次数</span><span className="font-mono font-bold dark:text-white text-base">{stats.totalCount}</span></div>
+                          <div className="flex justify-between items-center"><span>总时长</span><span className="font-mono font-bold dark:text-white text-base">{(stats.totalDuration/3600).toFixed(1)}h</span></div>
+                          <div className="flex justify-between items-center"><span>最长连胜</span><span className="font-mono font-bold dark:text-white text-base">{stats.maxStreak}天</span></div>
+                          <div className="flex justify-between items-center"><span>最长中断</span><span className="font-mono font-bold dark:text-white text-base">{stats.maxGap}天</span></div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+                {eventTypes.filter(e => statsSelectedIds.includes(e.id)).map(et => {
+                  const stats = calculateStats(sessions.filter(s => s.eventId === et.id));
+                  return (
+                    <div key={et.id} className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm" style={{ borderLeft: `4px solid ${et.color}` }}>
+                      <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2 truncate">{et.name}</h4>
+                      <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="flex justify-between items-center"><span className="flex gap-1.5 items-center"><Hash size={14}/> 总次数</span><span className="font-mono font-bold dark:text-white text-base">{stats.totalCount}</span></div>
+                        <div className="flex justify-between items-center"><span className="flex gap-1.5 items-center"><Clock size={14}/> 总时长</span><span className="font-mono font-bold dark:text-white text-base">{(stats.totalDuration/3600).toFixed(1)}h</span></div>
+                        <div className="flex justify-between items-center"><span className="flex gap-1.5 items-center"><Zap size={14}/> 最长连胜</span><span className="font-mono font-bold dark:text-white text-base">{stats.maxStreak}天</span></div>
+                        <div className="flex justify-between items-center"><span className="flex gap-1.5 items-center"><Maximize size={14}/> 最长中断</span><span className="font-mono font-bold dark:text-white text-base">{stats.maxGap}天</span></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
               <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                 <HeatmapCalendar title="活跃频率 (次数)" dataMap={getHeatmapData('count')} color={settings.themeColor} unit="次" weekStart={settings.weekStart} darkMode={settings.darkMode} />
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-bold flex items-center gap-2"><TrendingUp size={18}/> 趋势图</h3>
+                  <div className="flex gap-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+                     <button onClick={() => setTrendMetric('duration')} className={`px-3 py-1 text-xs rounded-md transition-all ${trendMetric === 'duration' ? 'bg-white dark:bg-gray-600 shadow-sm font-bold text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>时长</button>
+                     <button onClick={() => setTrendMetric('count')} className={`px-3 py-1 text-xs rounded-md transition-all ${trendMetric === 'count' ? 'bg-white dark:bg-gray-600 shadow-sm font-bold text-gray-800 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>次数</button>
+                  </div>
+                </div>
+                <TrendChart data={trendData} events={eventTypes.filter(e => statsSelectedIds.includes(e.id))} metric={trendMetric} period={trendPeriod} darkMode={settings.darkMode} />
               </div>
+
+              <div className="space-y-6">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                   <HeatmapCalendar title="活跃频率 (次数)" dataMap={getHeatmapData('count')} color={settings.themeColor} unit="次" weekStart={settings.weekStart} darkMode={settings.darkMode} />
+                </div>
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                   <HeatmapCalendar title="投入时间 (时长)" dataMap={getHeatmapData('duration')} color={settings.themeColor} unit="秒" weekStart={settings.weekStart} darkMode={settings.darkMode} />
+                </div>
+              </div>
+
+              <DailyTimelineSpectrum sessions={sessions.filter(s => s.endTime && statsSelectedIds.includes(s.eventId!))} color={settings.themeColor} darkMode={settings.darkMode} />
+            </div>
+          )}
+
+          {view === 'settings' && (
+            <div className="max-w-2xl mx-auto animate-in fade-in space-y-6 pb-20">
+              <h1 className="text-2xl font-bold mb-8">设置与管理</h1>
               <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                 <HeatmapCalendar title="投入时间 (时长)" dataMap={getHeatmapData('duration')} color={settings.themeColor} unit="秒" weekStart={settings.weekStart} darkMode={settings.darkMode} />
+                <h3 className="font-bold text-sm mb-4">创建新事件</h3>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input value={newEventName} onChange={e => setNewEventName(e.target.value)} placeholder="事件名称" className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2.5 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+                  <div className="flex gap-2 items-center">
+                    <div className="flex gap-1">{DEFAULT_COLORS.slice(0, 4).map(c => <button key={c} onClick={() => setNewEventColor(c)} className={`w-8 h-8 rounded-full border-2 transition-transform ${newEventColor === c ? 'border-gray-400 scale-110' : 'border-transparent'}`} style={{backgroundColor: c}} />)}</div>
+                    <button onClick={handleCreateEvent} disabled={!newEventName} className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold px-6 py-2.5 rounded-xl disabled:opacity-50 transition-all whitespace-nowrap">创建</button>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <DailyTimelineSpectrum sessions={sessions.filter(s => s.endTime && statsSelectedIds.includes(s.eventId!))} color={settings.themeColor} darkMode={settings.darkMode} />
-          </div>
-        )}
-
-        {view === 'settings' && (
-          <div className="max-w-2xl mx-auto animate-in fade-in pb-20">
-            <h1 className="text-2xl font-bold mb-8">设置与管理</h1>
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
-              <h3 className="font-bold text-sm mb-4">创建新事件</h3>
-              <div className="flex gap-2">
-                <input value={newEventName} onChange={e => setNewEventName(e.target.value)} placeholder="事件名称" className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-4 py-2 dark:text-white" />
-                <div className="flex gap-1">{DEFAULT_COLORS.slice(0, 4).map(c => <button key={c} onClick={() => setNewEventColor(c)} className={`w-8 h-8 rounded-full border-2 ${newEventColor === c ? 'border-gray-400 scale-110' : 'border-transparent'}`} style={{backgroundColor: c}} />)}</div>
-              </div>
-              <button onClick={handleCreateEvent} disabled={!newEventName} className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl disabled:opacity-50">创建</button>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
-               <h3 className="font-bold text-sm mb-4">现有事件</h3>
-               <div className="space-y-2">
-                 {eventTypes.map(et => (
-                   <div key={et.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                     <div className="flex items-center gap-3">
-                       <div className="w-3 h-3 rounded-full" style={{backgroundColor: et.color}}/>
-                       <span className="dark:text-white font-medium">{et.name}</span>
-                       {et.goal && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">有目标</span>}
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                 <h3 className="font-bold text-sm mb-4">现有事件</h3>
+                 <div className="space-y-2">
+                   {eventTypes.map(et => (
+                     <div key={et.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                       <div className="flex items-center gap-3 overflow-hidden">
+                         <div className="w-3 h-3 rounded-full shrink-0" style={{backgroundColor: et.color}}/>
+                         <span className="dark:text-white font-medium truncate">{et.name}</span>
+                         {et.goal && <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap">有目标</span>}
+                       </div>
+                       <button onClick={() => setEditingEventType(et)} className="text-sm text-blue-600 hover:underline px-2">编辑</button>
                      </div>
-                     <button onClick={() => setEditingEventType(et)} className="text-sm text-blue-600 hover:underline">编辑</button>
-                   </div>
-                 ))}
-               </div>
-            </div>
+                   ))}
+                 </div>
+              </div>
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6 space-y-6">
-               <h3 className="font-bold text-sm">通用设置</h3>
-               <div className="flex justify-between items-center">
-                 <span>深色模式</span>
-                 <button onClick={() => setSettings(s => ({...s, darkMode: !s.darkMode}))} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">{settings.darkMode ? <Moon size={18}/> : <Sun size={18}/>}</button>
-               </div>
-               <div className="flex justify-between items-center">
-                 <div><span>停止模式</span><div className="text-xs text-gray-400">选择填写备注的方式</div></div>
-                 <select value={settings.stopMode} onChange={e => setSettings(s => ({...s, stopMode: e.target.value as any}))} className="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg text-sm"><option value="quick">快速停止</option><option value="note">弹窗填写</option></select>
-               </div>
-               <div className="flex justify-between items-center">
-                 <span>日历起始</span>
-                 <button onClick={() => setSettings(s => ({...s, weekStart: s.weekStart === 1 ? 0 : 1}))} className="bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg text-sm">{settings.weekStart === 1 ? '周一' : '周日'}</button>
-               </div>
-            </div>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-6">
+                 <h3 className="font-bold text-sm">通用设置</h3>
+                 <div className="flex justify-between items-center">
+                   <span>深色模式</span>
+                   <button onClick={() => setSettings(s => ({...s, darkMode: !s.darkMode}))} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg transition-colors">{settings.darkMode ? <Moon size={20}/> : <Sun size={20}/>}</button>
+                 </div>
+                 <div className="flex justify-between items-center">
+                   <div><span>停止模式</span><div className="text-xs text-gray-400">选择填写备注的方式</div></div>
+                   <select value={settings.stopMode} onChange={e => setSettings(s => ({...s, stopMode: e.target.value as any}))} className="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg text-sm outline-none border-r-8 border-transparent"><option value="quick">快速停止</option><option value="note">弹窗填写</option></select>
+                 </div>
+                 <div className="flex justify-between items-center">
+                   <span>日历起始</span>
+                   <button onClick={() => setSettings(s => ({...s, weekStart: s.weekStart === 1 ? 0 : 1}))} className="bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors w-24">{settings.weekStart === 1 ? '周一' : '周日'}</button>
+                 </div>
+              </div>
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-               <h3 className="font-bold text-sm mb-4">数据管理</h3>
-               <div className="flex gap-4">
-                 <button onClick={exportData} className="flex-1 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 py-3 rounded-xl font-bold"><Download size={18}/> 导出</button>
-                 <label className="flex-1 flex items-center justify-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 py-3 rounded-xl font-bold cursor-pointer"><Upload size={18}/> 导入<input type="file" accept=".json" onChange={importData} className="hidden" /></label>
-               </div>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                 <h3 className="font-bold text-sm mb-4">数据管理</h3>
+                 <div className="flex flex-col sm:flex-row gap-4">
+                   <button onClick={exportData} className="flex-1 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 py-3 rounded-xl font-bold transition-transform active:scale-[0.98]"><Download size={18}/> 导出备份</button>
+                   <label className="flex-1 flex items-center justify-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 py-3 rounded-xl font-bold cursor-pointer transition-transform active:scale-[0.98]"><Upload size={18}/> 恢复备份<input type="file" accept=".json" onChange={importData} className="hidden" /></label>
+                 </div>
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* MODALS */}
-        {editingSession && <SessionModal session={editingSession} eventTypes={eventTypes} onClose={() => setEditingSession(null)} onSave={handleUpdateSession} onDelete={handleDeleteSession} isAddMode={false} darkMode={settings.darkMode} />}
-        
-        {isAddMode && <SessionModal session={null} eventTypes={eventTypes} onClose={() => setIsAddMode(false)} onSave={handleAddSession} isAddMode={true} darkMode={settings.darkMode} />}
-        
-        {editingEventType && <EditEventModal eventType={editingEventType} onClose={() => setEditingEventType(null)} onSave={handleUpdateEvent} onDelete={handleDeleteEvent} darkMode={settings.darkMode} />}
-
-        {stoppingSessionId && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-full max-w-sm border dark:border-gray-700">
-              <h3 className="text-lg font-bold mb-4 dark:text-white">记录心得?</h3>
-              <textarea autoFocus value={stoppingNote} onChange={e => setStoppingNote(e.target.value)} className="w-full p-3 border rounded-xl mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white" rows={3} placeholder="可选备注..." />
-              <button onClick={() => handleStop(stoppingSessionId, stoppingNote)} className="w-full py-2 bg-blue-600 text-white rounded-xl font-bold">完成</button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around items-center h-16 z-50 px-2 safe-area-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        {[{ id: 'home', icon: LayoutGrid, label: '主页' }, { id: 'history', icon: History, label: '历史' }, { id: 'stats', icon: BarChart2, label: '统计' }, { id: 'settings', icon: Settings, label: '设置' }].map(item => (
+          <button key={item.id} onClick={() => setView(item.id as any)} className={`flex flex-col items-center justify-center w-full h-full gap-1 ${view === item.id ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`}>
+            <item.icon size={20} className={view === item.id ? 'fill-current opacity-20' : ''} />
+            <span className="text-[10px] font-medium">{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {/* MODALS */}
+      {editingSession && <SessionModal session={editingSession} eventTypes={eventTypes} onClose={() => setEditingSession(null)} onSave={handleUpdateSession} onDelete={handleDeleteSession} isAddMode={false} darkMode={settings.darkMode} />}
+      
+      {isAddMode && <SessionModal session={null} eventTypes={eventTypes} onClose={() => setIsAddMode(false)} onSave={handleAddSession} isAddMode={true} darkMode={settings.darkMode} />}
+      
+      {editingEventType && <EditEventModal eventType={editingEventType} onClose={() => setEditingEventType(null)} onSave={handleUpdateEvent} onDelete={handleDeleteEvent} darkMode={settings.darkMode} />}
+
+      {stoppingSessionId && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-full max-w-sm border dark:border-gray-700 shadow-2xl">
+            <h3 className="text-lg font-bold mb-4 dark:text-white">记录心得?</h3>
+            <textarea autoFocus value={stoppingNote} onChange={e => setStoppingNote(e.target.value)} className="w-full p-3 border rounded-xl mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white" rows={3} placeholder="可选备注..." />
+            <button onClick={() => handleStop(stoppingSessionId, stoppingNote)} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors">完成</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
