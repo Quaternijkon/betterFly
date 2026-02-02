@@ -78,13 +78,23 @@ const STORAGE_KEYS = {
   SESSIONS: 'tracker_sessions',
   EVENTS: 'tracker_events',
   SETTINGS: 'tracker_settings',
-  PENDING_DELETES: 'tracker_pending_deletes'
+  PENDING_DELETES: 'tracker_pending_deletes',
+  PENDING_SYNC: 'tracker_pending_sync'
 };
 
 interface PendingDeletes {
   sessions: string[];
   events: string[];
 }
+
+type PendingSyncOp =
+  | { type: 'sessionCreate'; payload: Session }
+  | { type: 'sessionUpdate'; payload: Session }
+  | { type: 'sessionDelete'; payload: { id: string } }
+  | { type: 'eventCreate'; payload: EventType }
+  | { type: 'eventUpdate'; payload: EventType }
+  | { type: 'eventDelete'; payload: { id: string } }
+  | { type: 'settingsUpdate'; payload: UserSettings };
 
 const getPendingDeletes = (): PendingDeletes => {
   try {
@@ -104,6 +114,18 @@ const addPendingDelete = (type: 'sessions' | 'events', id: string) => {
 
 const clearPendingDeletes = () => {
   localStorage.removeItem(STORAGE_KEYS.PENDING_DELETES);
+};
+
+const getPendingSyncQueue = (): PendingSyncOp[] => {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.PENDING_SYNC) || '[]');
+  } catch {
+    return [];
+  }
+};
+
+const setPendingSyncQueue = (queue: PendingSyncOp[]) => {
+  localStorage.setItem(STORAGE_KEYS.PENDING_SYNC, JSON.stringify(queue));
 };
 
 // --- Utility Functions ---
@@ -275,97 +297,97 @@ const AuthModal = ({ onClose, onLoginSuccess }: { onClose: () => void, onLoginSu
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-[#18181b] rounded-[32px] w-full max-w-[400px] shadow-2xl overflow-hidden relative">
-        {/* Header Design */}
-        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-[rgba(var(--theme-rgb),0.2)] to-purple-500/20 dark:from-[rgba(var(--theme-rgb),0.4)] dark:to-purple-900/40 pointer-events-none" />
-
-        <div className="relative p-8 pt-10">
-          <div className="flex justify-between items-start mb-8">
-            <div>
-              <div className="text-3xl font-bold tracking-tight flex items-baseline select-none mb-2">
-                <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>b</span>
-                <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
-                <span className="text-[#FBBC05] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
-                <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
-                <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
-                <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>r</span>
-                <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>F</span>
-                <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>l</span>
-                <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>y</span>
-              </div>
-              <h3 className="text-xl font-bold dark:text-white">Welcome Back</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">登录或自动注册账号</p>
+    <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-m3-surface-container w-full max-w-[420px] p-8 rounded-[28px] shadow-elevation-2 relative">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <div className="text-3xl font-medium tracking-tight flex items-baseline select-none">
+              <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>b</span>
+              <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
+              <span className="text-[#FBBC05] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
+              <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
+              <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
+              <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>r</span>
+              <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>F</span>
+              <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>l</span>
+              <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>y</span>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-full transition-colors dark:text-gray-400">
-              <Icons.X size={20} />
-            </button>
+            <h3 className="text-xl font-normal text-m3-on-surface mt-2">欢迎回来</h3>
+            <p className="text-sm text-m3-on-surface-variant mt-1">登录或自动注册账号</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-full border border-m3-outline-variant/40 hover:bg-m3-on-surface/5 transition-colors">
+            <Icons.X size={18} />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-google-red/10 text-google-red text-xs rounded-xl flex items-start gap-2">
+            <span className="mt-0.5">⚠️</span> {error}
+          </div>
+        )}
+
+        <div className="space-y-3 mb-6">
+          <button onClick={() => handleSocialLogin('google')} className="relative w-full flex items-center justify-center gap-3 bg-white border border-m3-outline-variant hover:bg-gray-50 transition-colors p-2.5 rounded-full text-sm font-medium text-m3-on-surface">
+            <div className="w-5 h-5 absolute left-4"><Icons.Google /></div>
+            <span>Google 继续</span>
+          </button>
+          <button onClick={() => handleSocialLogin('github')} className="relative w-full flex items-center justify-center gap-3 bg-white border border-m3-outline-variant hover:bg-gray-50 transition-colors p-2.5 rounded-full text-sm font-medium text-m3-on-surface">
+            <Icons.Github size={18} className="absolute left-4" />
+            <span>GitHub 继续</span>
+          </button>
+          <button onClick={() => handleSocialLogin('microsoft')} className="relative w-full flex items-center justify-center gap-3 bg-white border border-m3-outline-variant hover:bg-gray-50 transition-colors p-2.5 rounded-full text-sm font-medium text-m3-on-surface">
+            <div className="w-5 h-5 absolute left-4"><Icons.Microsoft /></div>
+            <span>Microsoft 继续</span>
+          </button>
+        </div>
+
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-m3-outline-variant"></div></div>
+          <div className="relative flex justify-center text-xs uppercase tracking-wider"><span className="px-2 bg-m3-surface-container text-m3-on-surface-variant">或使用邮箱</span></div>
+        </div>
+
+        <form onSubmit={handleEmailAuth} className="space-y-4">
+          <div className="group relative">
+            <input
+              type="email"
+              placeholder=" "
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="peer w-full px-4 py-3 border border-m3-outline rounded-lg bg-m3-surface text-m3-on-surface focus:border-google-blue focus:border-2 outline-none transition-colors"
+              required
+            />
+            <label className="absolute left-3 -top-2.5 bg-m3-surface-container px-1 text-xs text-m3-on-surface-variant transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-google-blue">
+              邮箱地址
+            </label>
           </div>
 
-          {error && (
-            <div className="mb-6 p-3 bg-red-50/50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-300 text-xs rounded-xl flex items-start gap-2">
-              <span className="mt-0.5" >⚠️</span> {error}
-            </div>
-          )}
-
-          {/* Social Login Blocks */}
-          <div className="space-y-3 mb-8">
-            <button onClick={() => handleSocialLogin('google')} className="w-full flex items-center justify-center gap-3 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group relative overflow-hidden bg-white dark:bg-transparent">
-              <div className="absolute inset-0 bg-gradient-to-r from-gray-50 to-transparent dark:from-gray-800 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="w-5 h-5 flex items-center justify-center relative z-10"><Icons.Google /></div>
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 relative z-10">Google 继续</span>
-            </button>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => handleSocialLogin('github')} className="flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:text-white hover:bg-[#24292e] dark:hover:bg-[#24292e] transition-all group bg-white dark:bg-transparent text-gray-700 dark:text-gray-200">
-                <Icons.Github size={20} />
-                <span className="text-sm font-semibold">GitHub</span>
-              </button>
-              <button onClick={() => handleSocialLogin('microsoft')} className="flex items-center justify-center gap-2 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all bg-white dark:bg-transparent">
-                <div className="w-5 h-5 flex items-center justify-center"><Icons.Microsoft /></div>
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Microsoft</span>
-              </button>
-            </div>
+          <div className="group relative">
+            <input
+              type="password"
+              placeholder=" "
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="peer w-full px-4 py-3 border border-m3-outline rounded-lg bg-m3-surface text-m3-on-surface focus:border-google-blue focus:border-2 outline-none transition-colors"
+              required
+              minLength={6}
+            />
+            <label className="absolute left-3 -top-2.5 bg-m3-surface-container px-1 text-xs text-m3-on-surface-variant transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-google-blue">
+              密码
+            </label>
           </div>
 
-          <div className="relative mb-8">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100 dark:border-gray-800"></div></div>
-            <div className="relative flex justify-center text-xs uppercase tracking-widest font-bold text-gray-400"><span className="px-3 bg-white dark:bg-[#18181b]">Or email</span></div>
-          </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-google-blue text-white py-2.5 rounded-full font-medium hover:shadow-elevation-1 hover:bg-google-blue/90 transition-all flex items-center justify-center gap-2"
+          >
+            {isLoading ? <Icons.Loader2 size={18} className="animate-spin" /> : <Icons.ArrowRight size={18} />}
+            <span>快速登录</span>
+          </button>
+        </form>
 
-          {/* Email Form */}
-          <form onSubmit={handleEmailAuth} className="space-y-3">
-            <div className="space-y-3">
-              <input
-                type="email"
-                placeholder="邮箱地址"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-[rgba(var(--theme-rgb),0.5)] outline-none transition-all text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400"
-                required
-              />
-              <input
-                type="password"
-                placeholder="密码"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-transparent focus:bg-white dark:focus:bg-gray-800 focus:border-[rgba(var(--theme-rgb),0.5)] outline-none transition-all text-sm font-medium text-gray-900 dark:text-white placeholder-gray-400"
-                required
-                minLength={6}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-4 bg-gray-900 dark:bg-white hover:bg-black dark:hover:bg-gray-100 text-white dark:text-black font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:hover:scale-100 flex items-center justify-center gap-2 mt-4"
-            >
-              {isLoading ? <Icons.Loader2 size={18} className="animate-spin" /> : <Icons.ArrowRight size={18} />}
-              <span>快速登录</span>
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <button onClick={() => handleSocialLogin('anonymous')} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">游客试用 &rarr;</button>
-          </div>
+        <div className="mt-6 text-center">
+          <button onClick={() => handleSocialLogin('anonymous')} className="text-xs text-m3-on-surface-variant hover:text-google-blue transition-colors">游客试用 →</button>
         </div>
       </div>
     </div>
@@ -428,10 +450,11 @@ const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
   );
 };
 
-const TrendChart = ({ data, events, metric, darkMode }: any) => {
-  const height = 300;
-  const width = 800;
+const TrendChart = ({ data, events, metric, darkMode, period, chartType }: any) => {
+  const height = 280;
   const padding = 40;
+  const pointSpacing = period === 'day' ? 12 : 28;
+  const width = Math.max(360, data.length * pointSpacing + padding * 2);
 
   let maxY = 0;
   data.forEach((d: any) => {
@@ -450,32 +473,95 @@ const TrendChart = ({ data, events, metric, darkMode }: any) => {
     return { ...ev, points };
   });
 
+  const shouldShowLabel = (d: any, i: number) => {
+    if (period === 'day') {
+      if (data.length <= 14) return true;
+      const date = new Date(d.date);
+      return date.getDay() === 1;
+    }
+    return true;
+  };
+
+  const formatVal = (val: number) => metric === 'duration' ? `${(val / 3600).toFixed(2)}小时` : `${Math.round(val)}`;
+
+  const barWidth = (width - padding * 2) / Math.max(data.length, 1);
+
   return (
     <div className="w-full">
-      <div className="w-full overflow-x-auto pb-4 scrollbar-hide">
-        <div className="min-w-[600px]">
-          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto font-sans">
-            {[0, 0.25, 0.5, 0.75, 1].map(t => {
-              const y = height - padding - t * (height - padding * 2);
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto font-sans">
+        {[0, 0.25, 0.5, 0.75, 1].map(t => {
+          const y = height - padding - t * (height - padding * 2);
+          return (
+            <g key={t}>
+              <line x1={padding} y1={y} x2={width - padding} y2={y} stroke={darkMode ? "#374151" : "#e5e7eb"} strokeDasharray="4" />
+              <text x={padding - 10} y={y + 4} textAnchor="end" fontSize="10" fill={darkMode ? "#9ca3af" : "#6b7280"}>
+                {metric === 'duration' ? (maxY * t / 3600).toFixed(1) + '小时' : Math.floor(maxY * t)}
+              </text>
+            </g>
+          );
+        })}
+
+        {chartType === 'bar' ? (
+          data.map((d: any, i: number) => {
+            let acc = 0;
+            return events.map((ev: any) => {
+              const val = d.values[ev.id] || 0;
+              if (val === 0) return null;
+              const x = padding + i * barWidth + 2;
+              const y = getY(acc + val);
+              const h = getY(acc) - y;
+              acc += val;
               return (
-                <g key={t}>
-                  <line x1={padding} y1={y} x2={width - padding} y2={y} stroke={darkMode ? "#374151" : "#e5e7eb"} strokeDasharray="4" />
-                  <text x={padding - 10} y={y + 4} textAnchor="end" fontSize="10" fill={darkMode ? "#9ca3af" : "#6b7280"}>
-                    {metric === 'duration' ? (maxY * t / 3600).toFixed(1) + 'h' : Math.floor(maxY * t)}
-                  </text>
-                </g>
+                <rect
+                  key={`${ev.id}-${i}`}
+                  x={x}
+                  y={y}
+                  width={Math.max(2, barWidth - 4)}
+                  height={h}
+                  rx={2}
+                  fill={ev.color}
+                  opacity={0.85}
+                  data-tip={`${d.date} · ${ev.name}: ${formatVal(val)}`}
+                />
               );
-            })}
-            {data.map((d: any, i: number) => {
-              if (data.length > 10 && i % Math.ceil(data.length / 10) !== 0) return null;
-              return <text key={i} x={getX(i)} y={height - 10} textAnchor="middle" fontSize="10" fill={darkMode ? "#9ca3af" : "#6b7280"}>{d.date.slice(5)}</text>;
-            })}
-            {lines.map((line: any) => (
-              <polyline key={line.id} points={line.points} fill="none" stroke={line.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-80 hover:opacity-100 hover:stroke-[3px] transition-all" />
-            ))}
-          </svg>
-        </div>
-      </div>
+            });
+          })
+        ) : (
+          lines.map((line: any) => (
+            <polyline key={line.id} points={line.points} fill="none" stroke={line.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-80 hover:opacity-100 hover:stroke-[3px] transition-all" />
+          ))
+        )}
+
+        {chartType === 'line' &&
+          events.map((ev: any) =>
+            data.map((d: any, i: number) => {
+              const val = d.values[ev.id] || 0;
+              if (val === 0) return null;
+              return (
+                <circle
+                  key={`${ev.id}-pt-${i}`}
+                  cx={getX(i)}
+                  cy={getY(val)}
+                  r={3}
+                  fill={ev.color}
+                  opacity={0.8}
+                  data-tip={`${d.date} · ${ev.name}: ${formatVal(val)}`}
+                />
+              );
+            })
+          )}
+
+        {data.map((d: any, i: number) => {
+          if (!shouldShowLabel(d, i)) return null;
+          const label = period === 'month' ? d.date : d.date.slice(5);
+          return (
+            <text key={i} x={getX(i)} y={height - 10} textAnchor="middle" fontSize="10" fill={darkMode ? "#9ca3af" : "#6b7280"}>
+              {label}
+            </text>
+          );
+        })}
+      </svg>
+
       <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center px-2">
         {lines.map((l: any) => (
           <div key={l.id} className="flex items-center gap-1.5 text-xs">
@@ -488,23 +574,22 @@ const TrendChart = ({ data, events, metric, darkMode }: any) => {
   );
 };
 
-const DailyTimelineSpectrum = ({ sessions, color }: any) => {
+const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', palette = 'mono', showComparison = false }: any) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const compareRef = useRef<HTMLCanvasElement>(null);
+  const baseDataRef = useRef<{ type: '1d' | '2d'; minuteCounts?: Int32Array; grid?: Int32Array[] } | null>(null);
+  const compareDataRef = useRef<{ type: '1d' | '2d'; minuteCounts?: Int32Array; grid?: Int32Array[] } | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
 
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  const getThermalColor = (t: number) => {
+    const clamped = Math.max(0, Math.min(1, t));
+    const hue = 220 - clamped * 220; // blue -> red
+    return `hsl(${hue}, 90%, 50%)`;
+  };
 
-    const width = canvas.width;
-    const height = canvas.height;
-    ctx.clearRect(0, 0, width, height);
-
+  const buildMinuteCounts = (data: any[]) => {
     const minuteCounts = new Int32Array(1440);
-    let maxOverlap = 0;
-
-    sessions.forEach((s: any) => {
+    data.forEach((s: any) => {
       if (!s.startTime) return;
       const start = new Date(s.startTime);
       const end = s.endTime ? new Date(s.endTime) : new Date();
@@ -520,27 +605,49 @@ const DailyTimelineSpectrum = ({ sessions, color }: any) => {
         for (let i = 0; i <= endMin; i++) minuteCounts[i]++;
       }
     });
+    return minuteCounts;
+  };
 
+  const buildHeatGrid = (data: any[]) => {
+    const grid = Array.from({ length: 7 }, () => new Int32Array(24));
+    data.forEach((s: any) => {
+      if (!s.startTime) return;
+      const start = new Date(s.startTime);
+      const end = s.endTime ? new Date(s.endTime) : new Date();
+      if (end.getTime() - start.getTime() > 86400000) return;
+
+      const temp = new Date(start);
+      while (temp <= end) {
+        const day = temp.getDay();
+        const hour = temp.getHours();
+        grid[day][hour] += 1;
+        temp.setMinutes(temp.getMinutes() + 5);
+      }
+    });
+    return grid;
+  };
+
+  const render1D = (data: any[], canvas: HTMLCanvasElement | null) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const minuteCounts = buildMinuteCounts(data);
+    let maxOverlap = 0;
     for (let i = 0; i < 1440; i++) maxOverlap = Math.max(maxOverlap, minuteCounts[i]);
     if (maxOverlap === 0) maxOverlap = 1;
 
-    // Change to Percentile-based Opacity Calculation
-    // 1. Collect all non-zero counts
     const activeCounts = Array.from(minuteCounts).filter(c => c > 0).sort((a, b) => a - b);
-
-    // 2. Create a mapping from Count -> Percentile (0 to 1)
     const countToAlpha = new Map<number, number>();
     if (activeCounts.length > 0) {
-      // Use unique counts to determining "rank" is slightly safer for performance if many duplicates, 
-      // but for exact percentile, we look at the position in the full sorted list.
       const uniqueCounts = [...new Set(activeCounts)];
       uniqueCounts.forEach(val => {
-        // Rank is the last index of this value in the sorted array (how many items are <= val)
-        // Using lastIndexOf simply:
         const rank = activeCounts.lastIndexOf(val) + 1;
         const percentile = rank / activeCounts.length;
-        // Map percentile 0-1 to opacity range e.g., 0.3 - 1.0. 
-        // 0.3 ensures even the lowest non-zero value is clearly distinct from 0 (blank).
         countToAlpha.set(val, 0.3 + (percentile * 0.7));
       });
     }
@@ -549,27 +656,186 @@ const DailyTimelineSpectrum = ({ sessions, color }: any) => {
     for (let i = 0; i < 1440; i++) {
       const count = minuteCounts[i];
       if (count === 0) continue;
-
-      // Use the percentile-based alpha, fallback to linear if something fails (shouldn't happen)
       const alpha = countToAlpha.get(count) || (count / maxOverlap);
-
-      ctx.fillStyle = color;
-      ctx.globalAlpha = alpha;
+      if (palette === 'thermal') {
+        ctx.fillStyle = getThermalColor(alpha);
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = color;
+        ctx.globalAlpha = alpha;
+      }
       ctx.fillRect(i * sliceWidth, 0, Math.ceil(sliceWidth), height);
     }
-  }, [sessions, color]);
+
+    return { type: '1d' as const, minuteCounts };
+  };
+
+  const render2D = (data: any[], canvas: HTMLCanvasElement | null) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const grid = buildHeatGrid(data);
+    let maxCount = 0;
+    grid.forEach(row => row.forEach(v => { maxCount = Math.max(maxCount, v); }));
+    if (maxCount === 0) maxCount = 1;
+
+    const cellW = width / 24;
+    const cellH = height / 7;
+    for (let d = 0; d < 7; d++) {
+      for (let h = 0; h < 24; h++) {
+        const val = grid[d][h];
+        if (val === 0) continue;
+        const t = val / maxCount;
+        if (palette === 'thermal') {
+          ctx.fillStyle = getThermalColor(t);
+          ctx.globalAlpha = 1;
+        } else {
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.2 + t * 0.8;
+        }
+        ctx.fillRect(h * cellW, d * cellH, cellW, cellH);
+      }
+    }
+
+    return { type: '2d' as const, grid };
+  };
+
+  useEffect(() => {
+    if (mode === '2d') baseDataRef.current = render2D(sessions, canvasRef.current) || null;
+    else baseDataRef.current = render1D(sessions, canvasRef.current) || null;
+  }, [sessions, color, mode, palette]);
+
+  useEffect(() => {
+    if (!showComparison || !compareSessions) return;
+    if (mode === '2d') compareDataRef.current = render2D(compareSessions, compareRef.current) || null;
+    else compareDataRef.current = render1D(compareSessions, compareRef.current) || null;
+  }, [compareSessions, color, mode, palette, showComparison]);
+
+  const handlePointer = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>, dataset: typeof baseDataRef, container: HTMLDivElement | null) => {
+    if (!container || !dataset.current) return;
+    const rect = container.getBoundingClientRect();
+    const clientX = 'touches' in event ? event.touches[0]?.clientX : event.clientX;
+    const clientY = 'touches' in event ? event.touches[0]?.clientY : event.clientY;
+    if (clientX === undefined || clientY === undefined) return;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    if (dataset.current.type === '1d' && dataset.current.minuteCounts) {
+      const idx = Math.min(1439, Math.max(0, Math.floor((x / rect.width) * 1440)));
+      const hour = Math.floor(idx / 60);
+      const minute = idx % 60;
+      const count = dataset.current.minuteCounts[idx] || 0;
+      setTooltip({
+        x: x + 8,
+        y: y + 8,
+        text: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} 覆盖 ${count} 次`
+      });
+      return;
+    }
+    if (dataset.current.type === '2d' && dataset.current.grid) {
+      const col = Math.min(23, Math.max(0, Math.floor((x / rect.width) * 24)));
+      const row = Math.min(6, Math.max(0, Math.floor((y / rect.height) * 7)));
+      const count = dataset.current.grid[row]?.[col] || 0;
+      const dayLabel = row === 0 ? 7 : row; // 1-7 display
+      setTooltip({
+        x: x + 8,
+        y: y + 8,
+        text: `星期${dayLabel} ${String(col).padStart(2, '0')}:00 覆盖 ${count} 次`
+      });
+    }
+  };
+
+  const clearTooltip = () => setTooltip(null);
 
   return (
-    <div className="mt-6 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+    <div className="mt-6 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm relative">
       <h3 className="font-bold text-gray-700 dark:text-gray-200 text-sm mb-4 flex items-center gap-2">
-        <Icons.Clock size={16} /> 24小时频率光谱 (00:00 - 24:00)
+        <Icons.Clock size={16} /> 24小时光谱分布 (时段覆盖)
       </h3>
-      <div className="relative h-16 w-full bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden">
-        <canvas ref={canvasRef} width={1440} height={60} className="w-full h-full block" />
-        <div className="absolute bottom-0 left-0 w-full flex justify-between px-2 text-[10px] text-gray-500 dark:text-gray-400 font-mono pointer-events-none mix-blend-multiply dark:mix-blend-screen">
-          <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+
+      <div className="space-y-4">
+        <div>
+          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">本周期</div>
+          {mode === '2d' ? (
+            <div
+              className="relative w-full bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden"
+              onMouseMove={(e) => handlePointer(e, baseDataRef, e.currentTarget)}
+              onMouseLeave={clearTooltip}
+              onTouchMove={(e) => handlePointer(e, baseDataRef, e.currentTarget)}
+              onTouchEnd={clearTooltip}
+            >
+              <canvas ref={canvasRef} width={480} height={140} className="w-full h-40 block" />
+              <div className="absolute bottom-0 left-0 w-full flex justify-between px-2 text-[10px] text-gray-500 dark:text-gray-400 font-mono pointer-events-none mix-blend-multiply dark:mix-blend-screen">
+                <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+              </div>
+              <div className="absolute left-1 top-2 bottom-2 flex flex-col justify-between text-[10px] text-gray-500 dark:text-gray-400 font-mono pointer-events-none">
+                {[1, 2, 3, 4, 5, 6, 7].map(n => <span key={n}>{n}</span>)}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="relative h-16 w-full bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden"
+              onMouseMove={(e) => handlePointer(e, baseDataRef, e.currentTarget)}
+              onMouseLeave={clearTooltip}
+              onTouchMove={(e) => handlePointer(e, baseDataRef, e.currentTarget)}
+              onTouchEnd={clearTooltip}
+            >
+              <canvas ref={canvasRef} width={1440} height={60} className="w-full h-full block" />
+              <div className="absolute bottom-0 left-0 w-full flex justify-between px-2 text-[10px] text-gray-500 dark:text-gray-400 font-mono pointer-events-none mix-blend-multiply dark:mix-blend-screen">
+                <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+              </div>
+            </div>
+          )}
         </div>
+
+        {showComparison && compareSessions && (
+          <div>
+            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">上周期</div>
+            {mode === '2d' ? (
+              <div
+                className="relative w-full bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden"
+                onMouseMove={(e) => handlePointer(e, compareDataRef, e.currentTarget)}
+                onMouseLeave={clearTooltip}
+                onTouchMove={(e) => handlePointer(e, compareDataRef, e.currentTarget)}
+                onTouchEnd={clearTooltip}
+              >
+                <canvas ref={compareRef} width={480} height={140} className="w-full h-40 block" />
+                <div className="absolute bottom-0 left-0 w-full flex justify-between px-2 text-[10px] text-gray-500 dark:text-gray-400 font-mono pointer-events-none mix-blend-multiply dark:mix-blend-screen">
+                  <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+                </div>
+                <div className="absolute left-1 top-2 bottom-2 flex flex-col justify-between text-[10px] text-gray-500 dark:text-gray-400 font-mono pointer-events-none">
+                  {[1, 2, 3, 4, 5, 6, 7].map(n => <span key={n}>{n}</span>)}
+                </div>
+              </div>
+            ) : (
+              <div
+                className="relative h-16 w-full bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden"
+                onMouseMove={(e) => handlePointer(e, compareDataRef, e.currentTarget)}
+                onMouseLeave={clearTooltip}
+                onTouchMove={(e) => handlePointer(e, compareDataRef, e.currentTarget)}
+                onTouchEnd={clearTooltip}
+              >
+                <canvas ref={compareRef} width={1440} height={60} className="w-full h-full block" />
+                <div className="absolute bottom-0 left-0 w-full flex justify-between px-2 text-[10px] text-gray-500 dark:text-gray-400 font-mono pointer-events-none mix-blend-multiply dark:mix-blend-screen">
+                  <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+      {tooltip && (
+        <div
+          className="absolute z-10 pointer-events-none px-2 py-1 text-xs rounded-lg bg-gray-900/90 text-white shadow-lg"
+          style={{ left: tooltip.x, top: tooltip.y }}
+        >
+          {tooltip.text}
+        </div>
+      )}
     </div>
   );
 };
@@ -688,7 +954,14 @@ const HeatmapCalendar = ({ dataMap, color, title, unit, weekStart = 1, darkMode 
                   const key = getDayKey(date);
                   const val = dataMap.get(key) || 0;
                   const { opacity, color: bg } = getIntensity(val);
-                  return <div key={key} className="w-full aspect-square rounded-[1px]" style={{ backgroundColor: bg, opacity: bg.startsWith('#') && bg !== color ? 1 : opacity }} />;
+                  return (
+                    <div
+                      key={key}
+                      title={`${date.toLocaleDateString()}: ${Math.floor(val)} ${unit}`}
+                      className="w-full aspect-square rounded-[1px]"
+                      style={{ backgroundColor: bg, opacity: bg.startsWith('#') && bg !== color ? 1 : opacity }}
+                    />
+                  );
                 })}
               </div>
             </div>
@@ -765,7 +1038,7 @@ const WeeklyRadarChart = ({ sessions, color, darkMode }: any) => {
   // Reorder to Mon-Sun (0=Mon, ... 6=Sun)
   // daySums: 0=Sun, 1=Mon...
   const orderedData = [1, 2, 3, 4, 5, 6, 0].map(d => daySums[d]);
-  const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
   const maxVal = Math.max(...orderedData, 1);
 
@@ -780,7 +1053,7 @@ const WeeklyRadarChart = ({ sessions, color, darkMode }: any) => {
 
   return (
     <div className="flex flex-col items-center justify-center p-4">
-      <div className="text-xs font-bold text-gray-400 uppercase mb-2">周分布 (完整周)</div>
+      <div className="text-xs font-bold text-gray-400 uppercase mb-2">周分布（完整周）</div>
       {validSessions.length === 0 ? (
         <div className="h-[200px] flex items-center justify-center text-xs text-gray-400">数据不足一周</div>
       ) : (
@@ -809,7 +1082,9 @@ const WeeklyRadarChart = ({ sessions, color, darkMode }: any) => {
           <polygon points={polygonPoints} fill={color} fillOpacity="0.4" stroke={color} strokeWidth="2" />
           {orderedData.map((val, i) => {
             const [rx, ry] = getPoint(i, val).split(',').map(Number);
-            return <circle key={i} cx={rx} cy={ry} r="3" fill={color} />;
+            return (
+              <circle key={i} cx={rx} cy={ry} r="3" fill={color} data-tip={`${labels[i]} · ${(val / 3600).toFixed(2)}小时`} />
+            );
           })}
         </svg>
       )}
@@ -924,7 +1199,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-[#fef7ff] dark:bg-[#1e2025] rounded-[28px] p-6 w-full max-w-md max-h-[90dvh] overflow-y-auto shadow-2xl">
+      <div className="bg-m3-surface-container dark:bg-[#1e2025] rounded-[28px] p-6 w-full max-w-md max-h-[90dvh] overflow-y-auto shadow-2xl">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-2xl font-normal text-gray-900 dark:text-gray-100">{isNew ? '创建新事件' : '编辑事件'}</h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-[#2c3038] rounded-full text-gray-600 dark:text-gray-300 transition-colors"><Icons.X size={24} /></button>
@@ -953,7 +1228,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
 
           {/* Tags Selection */}
           <div>
-            <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block px-2">标签管理 (Tags)</label>
+            <label className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 block px-2">标签管理</label>
             <div className="flex flex-wrap gap-2 px-1 mb-2">
               {tags.map(t => (
                 <span key={t} className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-md text-xs flex items-center gap-1">
@@ -977,7 +1252,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
           {/* Goal Setting Section */}
           <div className="bg-gray-50 dark:bg-[#2c3038] rounded-[20px] p-5">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-widest">目标设定 / Goal</span>
+              <span className="text-sm font-bold text-gray-700 dark:text-gray-200 uppercase tracking-widest">目标设定</span>
               {goal ?
                 <button onClick={() => setGoal(null)} className="text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded-full bg-white dark:bg-[#1e2025] border dark:border-red-900/30">移除目标</button>
                 :
@@ -1002,8 +1277,8 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                   <div className="space-y-1">
                     <label className="text-[10px] text-gray-400 font-bold uppercase ml-2">周期</label>
                     <select value={goal.period} onChange={e => setGoal({ ...goal, period: e.target.value as any })} className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm outline-none focus:ring-2 focus:ring-[rgba(var(--theme-rgb),0.2)]">
-                      <option value="week">每周 / Weekly</option>
-                      <option value="month">每月 / Monthly</option>
+                      <option value="week">每周</option>
+                      <option value="month">每月</option>
                     </select>
                   </div>
 
@@ -1011,8 +1286,8 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                   <div className="space-y-1">
                     <label className="text-[10px] text-gray-400 font-bold uppercase ml-2">单位</label>
                     <select value={goal.metric} onChange={e => setGoal({ ...goal, metric: e.target.value as any })} className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm outline-none focus:ring-2 focus:ring-[rgba(var(--theme-rgb),0.2)]">
-                      <option value="count">次数 (Times)</option>
-                      <option value="duration">时长 (Seconds)</option>
+                      <option value="count">次数</option>
+                      <option value="duration">时长（秒）</option>
                     </select>
                   </div>
                 </div>
@@ -1038,7 +1313,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                           className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-lg font-mono font-bold outline-none focus:ring-2 focus:ring-[rgba(var(--theme-rgb),0.2)]"
                           placeholder="0"
                         />
-                        <span className="absolute right-3 top-4 text-xs text-gray-400 font-bold">hr</span>
+                        <span className="absolute right-3 top-4 text-xs text-gray-400 font-bold">小时</span>
                       </div>
                       <div className="flex-1 relative">
                         <input
@@ -1054,7 +1329,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                           className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-lg font-mono font-bold outline-none focus:ring-2 focus:ring-[rgba(var(--theme-rgb),0.2)]"
                           placeholder="0"
                         />
-                        <span className="absolute right-3 top-4 text-xs text-gray-400 font-bold">min</span>
+                        <span className="absolute right-3 top-4 text-xs text-gray-400 font-bold">分钟</span>
                       </div>
                     </div>
                   ) : (
@@ -1245,6 +1520,9 @@ export default function App() {
   const [view, setView] = useState<'home' | 'stats' | 'history' | 'settings'>('home');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [pendingSyncQueue, setPendingSyncQueueState] = useState<PendingSyncOp[]>(() => getPendingSyncQueue());
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
   // Data State
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -1260,6 +1538,15 @@ export default function App() {
   const [filterIncomplete, setFilterIncomplete] = useState<'all' | 'complete' | 'incomplete'>('all');
   const [trendMetric, setTrendMetric] = useState<'count' | 'duration'>('duration');
   const [trendPeriod, setTrendPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [trendChartType, setTrendChartType] = useState<'line' | 'bar'>('line');
+  const [spectrumRange, setSpectrumRange] = useState<'all' | '7' | '30'>('30');
+  const [spectrumMode, setSpectrumMode] = useState<'1d' | '2d'>('1d');
+  const [spectrumPalette, setSpectrumPalette] = useState<'mono' | 'thermal'>('mono');
+  const [singleDurationChartType, setSingleDurationChartType] = useState<'line' | 'bar'>('line');
+  const [singleGapChartType, setSingleGapChartType] = useState<'line' | 'bar'>('line');
+  const [detailEventId, setDetailEventId] = useState<string | null>(null);
+  const [durationBucket, setDurationBucket] = useState<1 | 5 | 15>(5);
+  const [chartTooltip, setChartTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [editingEventType, setEditingEventType] = useState<EventType | null>(null);
   const [isAddMode, setIsAddMode] = useState(false);
@@ -1267,6 +1554,17 @@ export default function App() {
   const [stoppingNote, setStoppingNote] = useState('');
 
   const themeRgb = useMemo(() => hexToRgb(settings.themeColor), [settings.themeColor]);
+
+  const tabs = [
+    { id: 'home', label: '主页', icon: Icons.LayoutGrid, color: '#4285F4' },
+    { id: 'history', label: '历史', icon: Icons.History, color: '#EA4335' },
+    { id: 'stats', label: '统计', icon: Icons.BarChart2, color: '#FBBC05' },
+    { id: 'settings', label: '设置', icon: Icons.Settings, color: '#34A853' }
+  ] as const;
+
+  const activeTabIndex = Math.max(0, tabs.findIndex(tab => tab.id === view));
+  const activeTabColor = tabs[activeTabIndex]?.color || '#4285F4';
+  const isRemoteMode = Boolean(user);
 
   // 1. Auth Listener
   useEffect(() => {
@@ -1276,16 +1574,235 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    setPendingSyncQueue(pendingSyncQueue);
+  }, [pendingSyncQueue]);
+
   // Dark Mode Effect
   useEffect(() => {
     if (settings.darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   }, [settings.darkMode]);
 
-  // 2. Data Initialization (Local Only)
+  const enqueuePending = (op: PendingSyncOp) => {
+    setPendingSyncQueueState(prev => {
+      const next = [...prev, op];
+      return next;
+    });
+  };
+
+  const removePendingBySessionId = (sessionId: string) => {
+    setPendingSyncQueueState(prev => prev.filter(op => {
+      if ('payload' in op && (op.type === 'sessionCreate' || op.type === 'sessionUpdate')) {
+        return op.payload.id !== sessionId;
+      }
+      if (op.type === 'sessionDelete') return op.payload.id !== sessionId;
+      return true;
+    }));
+  };
+
+  const removePendingByEventId = (eventId: string) => {
+    setPendingSyncQueueState(prev => prev.filter(op => {
+      if ('payload' in op && (op.type === 'eventCreate' || op.type === 'eventUpdate')) {
+        return op.payload.id !== eventId;
+      }
+      if (op.type === 'eventDelete') return op.payload.id !== eventId;
+      return true;
+    }));
+  };
+
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const attemptWrite = async (op: PendingSyncOp, action: () => Promise<void>, retries = 2) => {
+    try {
+      await action();
+      setLastSyncError(null);
+      if (op.type.startsWith('session')) removePendingBySessionId((op as any).payload?.id || '');
+      if (op.type.startsWith('event')) removePendingByEventId((op as any).payload?.id || '');
+      if (op.type === 'settingsUpdate') setPendingSyncQueueState(prev => prev.filter(p => p.type !== 'settingsUpdate'));
+    } catch (err: any) {
+      if (retries > 0) {
+        await sleep(600);
+        return attemptWrite(op, action, retries - 1);
+      }
+      enqueuePending(op);
+      setLastSyncError(err?.message || '同步失败');
+      setSyncNotice('同步失败，已加入待同步队列');
+    }
+  };
+
+  const retryPendingSync = async () => {
+    if (!user || pendingSyncQueue.length === 0) return;
+    setSyncing(true);
+    try {
+      for (const op of pendingSyncQueue) {
+        if (op.type === 'sessionCreate') {
+          const s = op.payload;
+          const ref = doc(db, 'users', user.uid, 'sessions', s.id);
+          await attemptWrite(op, () => setDoc(ref, {
+            eventId: s.eventId,
+            note: s.note || '',
+            incomplete: s.incomplete || false,
+            rating: s.rating || 0,
+            startTime: Timestamp.fromDate(new Date(s.startTime)),
+            endTime: s.endTime ? Timestamp.fromDate(new Date(s.endTime)) : null
+          }));
+        }
+
+        if (op.type === 'sessionUpdate') {
+          const s = op.payload;
+          const ref = doc(db, 'users', user.uid, 'sessions', s.id);
+          await attemptWrite(op, () => updateDoc(ref, {
+            eventId: s.eventId,
+            note: s.note || '',
+            incomplete: s.incomplete || false,
+            rating: s.rating || 0,
+            startTime: Timestamp.fromDate(new Date(s.startTime)),
+            endTime: s.endTime ? Timestamp.fromDate(new Date(s.endTime)) : null
+          }));
+        }
+
+        if (op.type === 'sessionDelete') {
+          const ref = doc(db, 'users', user.uid, 'sessions', op.payload.id);
+          await attemptWrite(op, () => deleteDoc(ref));
+        }
+
+        if (op.type === 'eventCreate') {
+          const e = op.payload;
+          const ref = doc(db, 'users', user.uid, 'event_types', e.id);
+          await attemptWrite(op, () => setDoc(ref, {
+            ...e,
+            createdAt: Timestamp.fromDate(new Date(e.createdAt))
+          }));
+        }
+
+        if (op.type === 'eventUpdate') {
+          const e = op.payload;
+          const ref = doc(db, 'users', user.uid, 'event_types', e.id);
+          await attemptWrite(op, () => updateDoc(ref, { name: e.name, color: e.color, goal: e.goal || null, tags: e.tags || [] }));
+        }
+
+        if (op.type === 'eventDelete') {
+          const ref = doc(db, 'users', user.uid, 'event_types', op.payload.id);
+          await attemptWrite(op, () => deleteDoc(ref));
+        }
+
+        if (op.type === 'settingsUpdate') {
+          const ref = doc(db, 'users', user.uid, 'settings', 'preferences');
+          await attemptWrite(op, () => setDoc(ref, op.payload, { merge: true }));
+        }
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // 2. Data Initialization (Remote if logged in, otherwise Local)
   useEffect(() => {
-    loadLocalData();
-  }, []);
+    if (!user) {
+      loadLocalData();
+      return;
+    }
+
+    // Backfill local metadata for legacy users if server is empty
+    (async () => {
+      try {
+        const localSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+        const localEvents = localStorage.getItem(STORAGE_KEYS.EVENTS);
+        const localSessions = localStorage.getItem(STORAGE_KEYS.SESSIONS);
+
+        const [eventsSnap, sessionsSnap, settingsSnap] = await Promise.all([
+          getDocs(collection(db, 'users', user.uid, 'event_types')),
+          getDocs(collection(db, 'users', user.uid, 'sessions')),
+          getDoc(doc(db, 'users', user.uid, 'settings', 'preferences'))
+        ]);
+
+        if (eventsSnap.empty && localEvents) {
+          const parsed = JSON.parse(localEvents) as EventType[];
+          const batch = writeBatch(db);
+          parsed.forEach(e => {
+            const ref = doc(db, 'users', user.uid, 'event_types', e.id);
+            batch.set(ref, { ...e, createdAt: Timestamp.fromDate(new Date(e.createdAt)) });
+          });
+          await batch.commit();
+        }
+
+        if (sessionsSnap.empty && localSessions) {
+          const parsed = JSON.parse(localSessions) as Session[];
+          const batch = writeBatch(db);
+          parsed.forEach(s => {
+            const ref = doc(db, 'users', user.uid, 'sessions', s.id);
+            batch.set(ref, {
+              eventId: s.eventId,
+              note: s.note || '',
+              incomplete: s.incomplete || false,
+              rating: s.rating || 0,
+              startTime: Timestamp.fromDate(new Date(s.startTime)),
+              endTime: s.endTime ? Timestamp.fromDate(new Date(s.endTime)) : null
+            });
+          });
+          await batch.commit();
+        }
+
+        if (!settingsSnap.exists() && localSettings) {
+          const parsed = JSON.parse(localSettings) as UserSettings;
+          await setDoc(doc(db, 'users', user.uid, 'settings', 'preferences'), parsed, { merge: true });
+        }
+      } catch (err: any) {
+        setLastSyncError(err?.message || '元数据迁移失败');
+        setSyncNotice('检测到历史数据，迁移失败，请手动同步');
+      }
+    })();
+
+    setLoading(true);
+    const sessionsRef = collection(db, 'users', user.uid, 'sessions');
+    const eventsRef = collection(db, 'users', user.uid, 'event_types');
+    const settingsRef = doc(db, 'users', user.uid, 'settings', 'preferences');
+
+    let gotSessions = false;
+    let gotEvents = false;
+
+    const unsubscribeSessions = onSnapshot(sessionsRef, (snap) => {
+      const nextSessions = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .map((s: any) => ({
+          ...s,
+          startTime: s.startTime?.toDate ? s.startTime.toDate().toISOString() : s.startTime,
+          endTime: s.endTime?.toDate ? s.endTime.toDate().toISOString() : s.endTime
+        }))
+        .sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+      setSessions(nextSessions as Session[]);
+      gotSessions = true;
+      if (gotEvents) setLoading(false);
+    });
+
+    const unsubscribeEvents = onSnapshot(eventsRef, (snap) => {
+      const nextEvents = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .map((e: any) => ({
+          ...e,
+          createdAt: e.createdAt?.toDate ? e.createdAt.toDate().toISOString() : e.createdAt
+        }))
+        .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      setEventTypes(nextEvents as EventType[]);
+      if (statsSelectedIds.length === 0) setStatsSelectedIds(nextEvents.map((e: any) => e.id));
+      if (historySelectedIds.length === 0) setHistorySelectedIds(nextEvents.map((e: any) => e.id));
+      gotEvents = true;
+      if (gotSessions) setLoading(false);
+    });
+
+    const unsubscribeSettings = onSnapshot(settingsRef, (snap) => {
+      if (snap.exists()) {
+        setSettings(snap.data() as UserSettings);
+      }
+    });
+
+    return () => {
+      unsubscribeSessions();
+      unsubscribeEvents();
+      unsubscribeSettings();
+    };
+  }, [user]);
 
   // Helper: Load Local Data
   const loadLocalData = () => {
@@ -1310,12 +1827,12 @@ export default function App() {
   // Helper: Auto-save to Local Data (Always)
   useEffect(() => {
     // Avoid overwriting with empty data during initial load blink
-    if (!loading) {
+    if (!loading && !isRemoteMode) {
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
       localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(eventTypes));
       localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
     }
-  }, [settings, eventTypes, sessions, loading]);
+  }, [settings, eventTypes, sessions, loading, isRemoteMode]);
 
 
   // 3. New Sync Logic: Bidirectional Sync with Enhanced Merging
@@ -1600,19 +2117,65 @@ export default function App() {
     if (activeEventIds.has(eventId)) return;
     const newSession: Session = { id: uuid(), eventId, startTime: new Date().toISOString(), endTime: null };
     setSessions(prev => [newSession, ...prev]);
+
+    if (user) {
+      const ref = doc(db, 'users', user.uid, 'sessions', newSession.id);
+      await attemptWrite(
+        { type: 'sessionCreate', payload: newSession },
+        () => setDoc(ref, {
+          eventId: newSession.eventId,
+          note: '',
+          incomplete: false,
+          rating: 0,
+          startTime: Timestamp.fromDate(new Date(newSession.startTime)),
+          endTime: null
+        })
+      );
+    }
   };
 
   const handleStop = async (id: string, noteStr: string, incomplete: boolean = false, rating: number = 0) => {
-    setSessions(prev => prev.map(s => s.id === id ? { ...s, endTime: new Date().toISOString(), note: noteStr, incomplete, rating } : s));
+    const endTime = new Date().toISOString();
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, endTime, note: noteStr, incomplete, rating } : s));
     setStoppingSessionId(null); setStoppingNote('');
+
+    if (user) {
+      const ref = doc(db, 'users', user.uid, 'sessions', id);
+      await attemptWrite(
+        { type: 'sessionUpdate', payload: { id, eventId: '', startTime: '', endTime, note: noteStr, incomplete, rating } as Session },
+        () => updateDoc(ref, {
+          endTime: Timestamp.fromDate(new Date(endTime)),
+          note: noteStr || '',
+          incomplete: incomplete || false,
+          rating: rating || 0
+        })
+      );
+    }
   };
 
   const handleSaveEventType = async (id: string, name: string, color: string, goal: Goal | null, tags: string[] = []) => {
     if (id === 'new') {
       const newEvent: EventType = { id: uuid(), name, color, goal, archived: false, createdAt: new Date().toISOString(), tags };
       setEventTypes(prev => [...prev, newEvent]);
+      if (user) {
+        const ref = doc(db, 'users', user.uid, 'event_types', newEvent.id);
+        await attemptWrite(
+          { type: 'eventCreate', payload: newEvent },
+          () => setDoc(ref, {
+            ...newEvent,
+            createdAt: Timestamp.fromDate(new Date(newEvent.createdAt))
+          })
+        );
+      }
     } else {
       setEventTypes(prev => prev.map(e => e.id === id ? { ...e, name, color, goal, tags } : e));
+      if (user) {
+        const ref = doc(db, 'users', user.uid, 'event_types', id);
+        await attemptWrite(
+          { type: 'eventUpdate', payload: { id, name, color, goal, tags, archived: false, createdAt: new Date().toISOString() } as EventType },
+          () => updateDoc(ref, { name, color, goal, tags })
+        );
+      }
     }
     setEditingEventType(null);
   };
@@ -1624,10 +2187,24 @@ export default function App() {
     }
     if (!confirm('确定要删除这个事件类型吗？这将同时删除所有关联的记录。')) return;
 
-    addPendingDelete('events', id);
-    // Find all sessions using this event and mark them as deleted too
-    const relatedSessionIds = sessions.filter(s => s.eventId === id).map(s => s.id);
-    relatedSessionIds.forEach(sid => addPendingDelete('sessions', sid));
+    if (user) {
+      const batch = writeBatch(db);
+      const eRef = doc(db, 'users', user.uid, 'event_types', id);
+      batch.delete(eRef);
+      sessions.filter(s => s.eventId === id).forEach(s => {
+        const sRef = doc(db, 'users', user.uid, 'sessions', s.id);
+        batch.delete(sRef);
+      });
+      await attemptWrite(
+        { type: 'eventDelete', payload: { id } },
+        () => batch.commit()
+      );
+    } else {
+      addPendingDelete('events', id);
+      // Find all sessions using this event and mark them as deleted too
+      const relatedSessionIds = sessions.filter(s => s.eventId === id).map(s => s.id);
+      relatedSessionIds.forEach(sid => addPendingDelete('sessions', sid));
+    }
 
     setEventTypes(prev => prev.filter(e => e.id !== id));
     setSessions(prev => prev.filter(s => s.eventId !== id));
@@ -1637,23 +2214,70 @@ export default function App() {
   const handleUpdateSession = async (id: string, s: string, e: string | null, evId: string, n: string, inc: boolean, rate: number = 0) => {
     setSessions(prev => prev.map(session => session.id === id ? { ...session, startTime: s, endTime: e, eventId: evId, note: n, incomplete: inc, rating: rate } : session));
     setEditingSession(null);
+
+    if (user) {
+      const ref = doc(db, 'users', user.uid, 'sessions', id);
+      await attemptWrite(
+        { type: 'sessionUpdate', payload: { id, eventId: evId, startTime: s, endTime: e, note: n, incomplete: inc, rating: rate } as Session },
+        () => updateDoc(ref, {
+          eventId: evId,
+          note: n || '',
+          incomplete: inc || false,
+          rating: rate || 0,
+          startTime: Timestamp.fromDate(new Date(s)),
+          endTime: e ? Timestamp.fromDate(new Date(e)) : null
+        })
+      );
+    }
   };
 
   const handleAddSession = async (_id: string, s: string, e: string | null, evId: string, n: string, inc: boolean, rate: number = 0) => {
     const newSession = { id: uuid(), startTime: s, endTime: e, eventId: evId, note: n, incomplete: inc, rating: rate };
     setSessions(prev => [newSession, ...prev]);
     setIsAddMode(false);
+
+    if (user) {
+      const ref = doc(db, 'users', user.uid, 'sessions', newSession.id);
+      await attemptWrite(
+        { type: 'sessionCreate', payload: newSession as Session },
+        () => setDoc(ref, {
+          eventId: evId,
+          note: n || '',
+          incomplete: inc || false,
+          rating: rate || 0,
+          startTime: Timestamp.fromDate(new Date(s)),
+          endTime: e ? Timestamp.fromDate(new Date(e)) : null
+        })
+      );
+    }
   };
 
   const handleDeleteSession = async (id: string) => {
     if (!confirm('确定要删除这条记录吗？')) return;
-    addPendingDelete('sessions', id);
+    if (user) {
+      const ref = doc(db, 'users', user.uid, 'sessions', id);
+      await attemptWrite(
+        { type: 'sessionDelete', payload: { id } },
+        () => deleteDoc(ref)
+      );
+    } else {
+      addPendingDelete('sessions', id);
+    }
     setSessions(prev => prev.filter(s => s.id !== id));
     setEditingSession(null);
   };
 
   const toggleSetting = async (key: keyof UserSettings, val: any) => {
-    setSettings(prev => ({ ...prev, [key]: val }));
+    const next = { ...settings, [key]: val } as UserSettings;
+    setSettings(next);
+
+    if (user) {
+      const ref = doc(db, 'users', user.uid, 'settings', 'preferences');
+      await attemptWrite(
+        { type: 'settingsUpdate', payload: next },
+        () => setDoc(ref, next, { merge: true })
+      );
+    }
   };
 
   // --- Derived Calculations (Same as before) ---
@@ -1706,6 +2330,102 @@ export default function App() {
     const gapSinceLast = dayDiff(lastDate, today);
     if (gapSinceLast > maxGap) maxGap = gapSinceLast;
     return { totalCount, totalDuration, currentStreak, currentGap, maxStreak, maxGap };
+  };
+
+  const getCompletionExtras = (relevantSessions: Session[]) => {
+    const completed = relevantSessions.filter(s => s.endTime && !s.incomplete);
+    if (completed.length === 0) return { maxDuration: null, minDuration: null, minGap: null };
+
+    const durations = completed.map(s => (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 1000).filter(v => v >= 0);
+    const maxDuration = durations.length ? Math.max(...durations) : null;
+    const minDuration = durations.length ? Math.min(...durations) : null;
+
+    const sortedByEnd = completed.slice().sort((a, b) => new Date(a.endTime!).getTime() - new Date(b.endTime!).getTime());
+    let minGap: number | null = null;
+    for (let i = 1; i < sortedByEnd.length; i++) {
+      const prevEnd = new Date(sortedByEnd[i - 1].endTime!).getTime();
+      const currEnd = new Date(sortedByEnd[i].endTime!).getTime();
+      const gap = (currEnd - prevEnd) / 1000;
+      if (gap >= 0 && (minGap === null || gap < minGap)) minGap = gap;
+    }
+
+    return { maxDuration, minDuration, minGap };
+  };
+
+  const getDurationStats = (relevantSessions: Session[]) => {
+    const completed = relevantSessions.filter(s => s.endTime && !s.incomplete);
+    if (completed.length === 0) {
+      return { avg: null, median: null, p90: null, count: 0 };
+    }
+    const durations = completed
+      .map(s => (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 1000)
+      .filter(v => v >= 0)
+      .sort((a, b) => a - b);
+    const count = durations.length;
+    const avg = durations.reduce((a, b) => a + b, 0) / count;
+    const median = count % 2 === 0
+      ? (durations[count / 2 - 1] + durations[count / 2]) / 2
+      : durations[Math.floor(count / 2)];
+    const p90Index = Math.min(count - 1, Math.ceil(count * 0.9) - 1);
+    const p90 = durations[p90Index];
+    return { avg, median, p90, count };
+  };
+
+  const buildHistogram = (relevantSessions: Session[]) => {
+    const completed = relevantSessions.filter(s => s.endTime && !s.incomplete);
+    if (completed.length === 0) return { bins: [], min: 0, max: 0, maxCount: 0 };
+
+    const durations = completed
+      .map(s => (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 1000)
+      .filter(v => v >= 0);
+
+    const min = Math.min(...durations);
+    const max = Math.max(...durations);
+    if (min === max) {
+      return {
+        bins: [{ start: min, end: max, count: durations.length }],
+        min,
+        max,
+        maxCount: durations.length
+      };
+    }
+
+    const binCount = Math.min(12, Math.max(4, Math.ceil(Math.sqrt(durations.length))));
+    const step = (max - min) / binCount;
+    const bins = Array.from({ length: binCount }, (_, i) => ({
+      start: min + i * step,
+      end: min + (i + 1) * step,
+      count: 0
+    }));
+
+    durations.forEach(d => {
+      const idx = Math.min(binCount - 1, Math.floor((d - min) / step));
+      bins[idx].count += 1;
+    });
+
+    const maxCount = Math.max(...bins.map(b => b.count));
+    return { bins, min, max, maxCount };
+  };
+
+  const buildDurationSeries = (relevantSessions: Session[]) => {
+    const completed = relevantSessions
+      .filter(s => s.endTime && !s.incomplete)
+      .sort((a, b) => new Date(a.endTime!).getTime() - new Date(b.endTime!).getTime());
+    return completed.map(s => (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 1000);
+  };
+
+  const buildGapSeries = (relevantSessions: Session[]) => {
+    const completed = relevantSessions
+      .filter(s => s.endTime && !s.incomplete)
+      .sort((a, b) => new Date(a.endTime!).getTime() - new Date(b.endTime!).getTime());
+    const gaps: number[] = [];
+    for (let i = 1; i < completed.length; i++) {
+      const prevEnd = new Date(completed[i - 1].endTime!).getTime();
+      const currStart = new Date(completed[i].startTime).getTime();
+      const gap = (currStart - prevEnd) / 1000;
+      if (gap >= 0) gaps.push(gap);
+    }
+    return gaps;
   };
 
   const getGoalStatus = (event: EventType) => {
@@ -1789,11 +2509,103 @@ export default function App() {
     return m;
   };
 
+  const getTrendDataForSessions = (sourceSessions: Session[]) => {
+    const map = new Map<string, Record<string, number>>();
+    sourceSessions.filter(s => s.endTime).forEach(s => {
+      const date = new Date(s.endTime!);
+      let key = '';
+      if (trendPeriod === 'day') key = getDayKey(date);
+      else if (trendPeriod === 'week') {
+        const d = new Date(date);
+        d.setDate(d.getDate() - (d.getDay() - settings.weekStart + 7) % 7);
+        key = getDayKey(d);
+      } else {
+        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      }
+      if (!map.has(key)) map.set(key, {});
+      const val = trendMetric === 'count'
+        ? (s.incomplete ? 0 : 1)
+        : (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 1000;
+      if (!isNaN(val)) map.get(key)![s.eventId] = (map.get(key)![s.eventId] || 0) + val;
+    });
+    return Array.from(map.entries())
+      .map(([date, values]) => ({ date, values }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  };
+
+  const getHeatmapDataForSessions = (sourceSessions: Session[], metric: 'count' | 'duration') => {
+    const m = new Map<string, number>();
+    sourceSessions.filter(s => s.endTime).forEach(s => {
+      const key = getDayKey(new Date(s.endTime!));
+      const val = metric === 'count'
+        ? (s.incomplete ? 0 : 1)
+        : (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 1000;
+      if (!isNaN(val)) m.set(key, (m.get(key) || 0) + val);
+    });
+    return m;
+  };
+
+  const getSpectrumRangeFromSessions = (sourceSessions: Session[], range: 'all' | '7' | '30', offsetDays: number = 0) => {
+    if (range === 'all') return sourceSessions.filter(s => s.endTime);
+    const days = Number(range);
+    const end = new Date();
+    end.setDate(end.getDate() - offsetDays);
+    const start = new Date(end);
+    start.setDate(start.getDate() - days);
+    return sourceSessions.filter(s => {
+      if (!s.endTime) return false;
+      const endTime = new Date(s.endTime);
+      return endTime >= start && endTime <= end;
+    });
+  };
+
+  const handleChartTooltipMove = (event: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement | null;
+    const tipTarget = target?.closest?.('[data-tip]') as HTMLElement | null;
+    const tip = tipTarget?.dataset?.tip as string | undefined;
+    const current = event.currentTarget as HTMLElement;
+    if (!tip) {
+      setChartTooltip(null);
+      return;
+    }
+    const rect = current.getBoundingClientRect();
+    const clientX = 'touches' in event ? event.touches[0]?.clientX : (event as React.MouseEvent).clientX;
+    const clientY = 'touches' in event ? event.touches[0]?.clientY : (event as React.MouseEvent).clientY;
+    if (clientX === undefined || clientY === undefined) return;
+    setChartTooltip({
+      x: clientX - rect.left + 10,
+      y: clientY - rect.top + 10,
+      text: tip
+    });
+  };
+
+  const clearChartTooltip = () => setChartTooltip(null);
+
+  const formatHourMinute = (date: Date) => {
+    const h = String(date.getHours()).padStart(2, '0');
+    const m = String(date.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
   const exportData = () => {
     const data = { settings, eventTypes, sessions };
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'tracker_backup.json'; a.click();
+  };
+
+  const getSpectrumRangeSessions = (range: 'all' | '7' | '30', offsetDays: number = 0) => {
+    if (range === 'all') return sessions.filter(s => s.endTime && statsSelectedIds.includes(s.eventId));
+    const days = Number(range);
+    const end = new Date();
+    end.setDate(end.getDate() - offsetDays);
+    const start = new Date(end);
+    start.setDate(start.getDate() - days);
+    return sessions.filter(s => {
+      if (!s.endTime || !statsSelectedIds.includes(s.eventId)) return false;
+      const endTime = new Date(s.endTime);
+      return endTime >= start && endTime <= end;
+    });
   };
 
   const importData = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1817,82 +2629,119 @@ export default function App() {
 
   return (
     <div
-      className={`${settings.darkMode ? 'dark' : ''} fixed inset-0 w-full h-full bg-[#f8f9ff] dark:bg-[#111318] text-gray-900 dark:text-gray-100 font-sans flex flex-col md:flex-row overflow-hidden`}
+      className={`${settings.darkMode ? 'dark' : ''} bf-m3 min-h-screen w-full bg-m3-surface dark:bg-[#111318] text-m3-on-surface dark:text-gray-100 font-sans`}
       style={{ '--theme-rgb': themeRgb } as React.CSSProperties}
     >
-      {/* SIDEBAR (Desktop Only) */}
-      <div className="hidden md:flex w-20 bg-[#fdfcff] dark:bg-[#191c22] border-r border-gray-100 dark:border-gray-800 flex-col items-center justify-between py-6 z-10 sticky top-0 h-screen">
-        <div className="font-bold text-xl tracking-tight flex flex-col items-center justify-center leading-none select-none gap-0.5">
-          <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>b</span>
-          <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
-          <span className="text-[#FBBC05] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
-          <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
-          <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
-          <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>r</span>
-          <div className="h-1"></div>
-          <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>F</span>
-          <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>l</span>
-          <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>y</span>
-        </div>
-        <nav className="flex flex-col gap-6">
-          {[
-            { id: 'home', icon: Icons.LayoutGrid, color: '#4285F4' },
-            { id: 'history', icon: Icons.History, color: '#EA4335' },
-            { id: 'stats', icon: Icons.BarChart2, color: '#FBBC05' },
-            { id: 'settings', icon: Icons.Settings, color: '#34A853' }
-          ].map(item => {
-            const isActive = view === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setView(item.id as any)}
-                className={`p-3 rounded-2xl transition-all duration-300 hover:scale-110 ${isActive ? '' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-60 hover:opacity-100'}`}
-                style={isActive ? { color: item.color, transform: 'scale(1.1)' } : {}}
-              >
-                <item.icon size={28} strokeWidth={isActive ? 2.5 : 2} />
-              </button>
-            );
-          })}
-        </nav>
-        <div className="hidden md:block pb-4 cursor-pointer" onClick={() => user ? setView('settings') : setShowAuthModal(true)}>
-          {user ? (
-            <div className="w-8 h-8 rounded-full bg-[rgba(var(--theme-rgb),0.2)] text-[rgb(var(--theme-rgb))] flex items-center justify-center font-bold text-xs" title={user.email || 'User'}>{user.email?.[0].toUpperCase() || 'U'}</div>
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center hover:bg-[rgba(var(--theme-rgb),0.2)] transition-colors"><Icons.User size={16} className="text-gray-400" /></div>
-          )}
-        </div>
-      </div>
-
-      <main className="flex-1 p-4 md:p-10 overflow-y-auto h-[100dvh] md:h-screen relative scroll-smooth safe-area-bottom pb-16 md:pb-6">
-        {/* Mobile Header Auth */}
-        <div className="md:hidden flex justify-between items-center mb-6 pt-safe px-1">
-          <div className="font-bold text-2xl tracking-tight flex items-baseline select-none">
-            <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>b</span>
-            <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
-            <span className="text-[#FBBC05] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
-            <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
-            <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
-            <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>r</span>
-            <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>F</span>
-            <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>l</span>
-            <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>y</span>
+      <nav className="sticky top-0 z-30 backdrop-blur bg-m3-surface/80 dark:bg-[#111318]/80 border-b border-m3-outline-variant/30">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="text-2xl font-medium tracking-tight select-none flex items-baseline">
+              <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>b</span>
+              <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
+              <span className="text-[#FBBC05] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
+              <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>t</span>
+              <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>e</span>
+              <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>r</span>
+              <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>F</span>
+              <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>l</span>
+              <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>y</span>
+            </div>
+            <span className="text-xs text-m3-on-surface-variant hidden sm:inline">专注记录</span>
           </div>
-          <button onClick={() => user ? setView('settings') : setShowAuthModal(true)} className="p-1.5 bg-gray-100 dark:bg-gray-700 rounded-full border border-gray-200 dark:border-gray-600">
-            {user ? <div className="w-7 h-7 rounded-full bg-[rgb(var(--theme-rgb))] text-white flex items-center justify-center text-xs font-bold">{user.email?.[0].toUpperCase() || 'U'}</div> : <Icons.User size={20} className="text-gray-600 dark:text-gray-300 m-1" />}
-          </button>
+          <div className="flex items-center gap-2">
+            {user && (
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-m3-primary-container text-m3-on-primary-container hover:shadow-elevation-1 transition-all disabled:opacity-70"
+              >
+                {syncing ? <Icons.Loader2 size={16} /> : <Icons.Cloud size={16} />}
+                <span>{syncing ? '同步中' : '同步'}</span>
+              </button>
+            )}
+            <button
+              onClick={() => toggleSetting('darkMode', !settings.darkMode)}
+              className="p-2.5 rounded-full border border-m3-outline-variant/30 text-m3-on-surface-variant hover:bg-m3-on-surface/5 transition-colors"
+              title="切换主题"
+            >
+              {settings.darkMode ? <Icons.Moon size={18} /> : <Icons.Sun size={18} />}
+            </button>
+            <button
+              onClick={() => user ? setView('settings') : setShowAuthModal(true)}
+              className="p-2.5 rounded-full border border-m3-outline-variant/30 hover:bg-m3-on-surface/5 transition-colors"
+              title={user ? (user.email || 'User') : '登录'}
+            >
+              {user ? (
+                <div className="w-7 h-7 rounded-full bg-[rgba(var(--theme-rgb),0.2)] text-[rgb(var(--theme-rgb))] flex items-center justify-center text-xs font-bold">
+                  {user.email?.[0].toUpperCase() || 'U'}
+                </div>
+              ) : (
+                <Icons.User size={18} className="text-m3-on-surface-variant" />
+              )}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {(pendingSyncQueue.length > 0 || lastSyncError) && (
+        <div className="bg-google-yellow/10 border-b border-google-yellow/20 text-m3-on-surface">
+          <div className="max-w-7xl mx-auto px-4 md:px-8 py-2 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-google-yellow" />
+              <span>同步异常：存在未同步记录，建议手动同步或重试。</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={retryPendingSync} className="px-3 py-1 rounded-full border border-google-yellow/30 hover:bg-google-yellow/10">重试待同步</button>
+              <button onClick={handleSync} className="px-3 py-1 rounded-full border border-m3-outline-variant/40 hover:bg-m3-on-surface/5">手动同步</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className="max-w-7xl mx-auto p-4 md:p-8">
+        {syncNotice && (
+          <div className="mb-4 bg-m3-surface-container-high border border-m3-outline-variant/40 rounded-xl p-3 text-sm text-m3-on-surface flex items-center justify-between">
+            <span>{syncNotice}</span>
+            <button onClick={() => setSyncNotice(null)} className="text-m3-on-surface-variant hover:text-m3-on-surface">关闭</button>
+          </div>
+        )}
+        <div className="flex justify-center mb-8">
+          <div className="relative bg-m3-surface-container-high p-1 rounded-full grid grid-cols-4 w-full max-w-2xl border border-m3-outline-variant/30">
+            <div
+              className="absolute top-1 bottom-1 rounded-full shadow-md z-0 transition-all duration-300"
+              style={{
+                backgroundColor: activeTabColor,
+                left: `calc(${activeTabIndex * 25}% + 4px)`,
+                width: 'calc(25% - 8px)'
+              }}
+            />
+            {tabs.map(tab => {
+              const isActive = view === tab.id;
+              const IconComp = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setView(tab.id as any)}
+                  className="relative z-10 flex-auto py-2.5 text-sm font-medium flex items-center justify-center gap-2 rounded-full outline-none focus-visible:ring-2 ring-google-blue/50"
+                >
+                  <span className={`relative flex items-center gap-2 transition-colors duration-200 ${isActive ? 'text-white' : 'text-m3-on-surface-variant hover:text-m3-on-surface'}`}>
+                    <IconComp className="w-4 h-4" />
+                    <span className={isActive ? 'inline' : 'hidden md:inline'}>{tab.label}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* --- HOME VIEW --- */}
         {view === 'home' && (
-          <div className="max-w-4xl mx-auto animate-in fade-in">
+          <div className="max-w-6xl mx-auto animate-in fade-in">
             <header className="mb-6 flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-normal text-gray-900 dark:text-gray-50">今日看板</h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{new Date().toLocaleDateString()} · {activeSessions.length} 个进行中</p>
               </div>
-              <button onClick={() => setView('settings')} className="md:hidden p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-600 dark:text-gray-300">
-                <Icons.Settings size={20} />
-              </button>
             </header>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
@@ -1913,7 +2762,7 @@ export default function App() {
                       rounded-[24px] border-0
                       ${isActive
                         ? 'bg-[rgba(var(--theme-rgb),0.1)] dark:bg-[#1e2330] ring-2 ring-[rgba(var(--theme-rgb),0.2)] cursor-default'
-                        : 'bg-[#f3f4f9] dark:bg-[#2e3035] hover:bg-[#eef1fa] dark:hover:bg-[#363a42] hover:shadow-lg hover:-translate-y-1'
+                        : 'bg-m3-surface-container dark:bg-[#2e3035] hover:bg-m3-surface-container-high dark:hover:bg-[#363a42] hover:shadow-lg hover:-translate-y-1'
                       }
                     `}
                   >
@@ -1937,11 +2786,11 @@ export default function App() {
                       <div className="flex gap-4 text-xs font-medium opacity-80">
                         <div className={`flex flex-col ${stats.currentStreak > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
                           <span className="text-[10px] uppercase tracking-wider opacity-60">连胜</span>
-                          <span className="text-base">{stats.currentStreak}<span className="text-[10px] ml-0.5">d</span></span>
+                          <span className="text-base">{stats.currentStreak}<span className="text-[10px] ml-0.5">天</span></span>
                         </div>
                         <div className={`flex flex-col ${stats.currentGap > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
                           <span className="text-[10px] uppercase tracking-wider opacity-60">未做</span>
-                          <span className="text-base">{stats.currentGap}<span className="text-[10px] ml-0.5">d</span></span>
+                          <span className="text-base">{stats.currentGap}<span className="text-[10px] ml-0.5">天</span></span>
                         </div>
                       </div>
                     </div>
@@ -1967,7 +2816,7 @@ export default function App() {
               <div className="animate-in slide-in-from-bottom-6 duration-500">
                 <div className="flex items-center gap-2 mb-4 px-2">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-sm font-medium text-gray-500 uppercase tracking-widest">Running</span>
+                  <span className="text-sm font-medium text-gray-500 uppercase tracking-widest">进行中</span>
                 </div>
                 <div className="space-y-3">
                   {activeSessions.map(s => <OngoingSessionCard key={s.id} session={s} eventType={eventTypes.find(e => e.id === s.eventId)} onStop={() => settings.stopMode === 'quick' ? handleStop(s.id, '') : setStoppingSessionId(s.id)} />)}
@@ -2014,7 +2863,15 @@ export default function App() {
         )}
 
         {view === 'stats' && (
-          <div className="max-w-5xl mx-auto animate-in fade-in pb-20">
+          <div
+            className="max-w-5xl mx-auto animate-in fade-in pb-20 relative"
+            onMouseOver={detailEventId ? undefined : handleChartTooltipMove}
+            onMouseMove={detailEventId ? undefined : handleChartTooltipMove}
+            onMouseLeave={detailEventId ? undefined : clearChartTooltip}
+            onTouchStart={detailEventId ? undefined : handleChartTooltipMove}
+            onTouchMove={detailEventId ? undefined : handleChartTooltipMove}
+            onTouchEnd={detailEventId ? undefined : clearChartTooltip}
+          >
             <header className="flex flex-col gap-4 mb-8">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -2044,75 +2901,255 @@ export default function App() {
               </div>
             </header>
 
-            {/* Combined Stats Row */}
+            {/* Individual Breakdown */}
             {statsSelectedIds.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 px-1">
-                  {statsSelectedIds.length > 1 ? '聚合统计' : '概览'}
-                </h3>
-                {(() => {
-                  const relevantSessions = filteredSessions.filter(s => statsSelectedIds.includes(s.eventId));
-                  const stats = calculateStats(relevantSessions);
-
-                  const StatCard = ({ label, value, icon: Icon }: any) => (
-                    <div className="bg-white dark:bg-[#1e2330] p-5 rounded-[24px] flex flex-col justify-between h-32 hover:shadow-md transition-all duration-300 group">
-                      <div className="flex justify-between items-start">
-                        <div className="text-3xl font-light text-gray-900 dark:text-white font-mono tracking-tight group-hover:scale-110 transition-transform origin-left">{value}</div>
-                        <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-[#2c3038] flex items-center justify-center text-gray-400 group-hover:text-[rgb(var(--theme-rgb))] transition-colors">
-                          <Icon size={16} />
-                        </div>
-                      </div>
-                      <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">{label}</div>
-                    </div>
-                  );
-
-                  return (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <StatCard icon={Icons.Hash} label="Total Events" value={stats.totalCount} />
-                      <StatCard icon={Icons.Clock} label="Total Time" value={(stats.totalDuration / 3600).toFixed(1) + 'h'} />
-                      <StatCard icon={Icons.Zap} label="Max Streak" value={stats.maxStreak + 'd'} />
-                      <StatCard icon={Icons.Coffee} label="Max Gap" value={stats.maxGap + 'd'} />
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* Individual Breakdown (if multiple selected) */}
-            {statsSelectedIds.length > 1 && (
               <div className="mb-8">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 px-1">分项数据</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {eventTypes.filter(e => statsSelectedIds.includes(e.id)).map(et => {
                     const stats = calculateStats(filteredSessions.filter(s => s.eventId === et.id));
+                    const extras = getCompletionExtras(filteredSessions.filter(s => s.eventId === et.id));
+                    const durationStats = getDurationStats(filteredSessions.filter(s => s.eventId === et.id));
+                    const histogram = buildHistogram(filteredSessions.filter(s => s.eventId === et.id));
+                    const durationSeries = buildDurationSeries(filteredSessions.filter(s => s.eventId === et.id));
+                    const gapSeries = buildGapSeries(filteredSessions.filter(s => s.eventId === et.id));
                     return (
-                      <div key={et.id} className="bg-white dark:bg-[#1e2330] p-6 rounded-[24px]">
+                      <button
+                        key={et.id}
+                        onClick={() => setDetailEventId(et.id)}
+                        className="bg-white dark:bg-[#1e2330] p-6 rounded-[24px] text-left hover:shadow-lg transition-all border border-transparent hover:border-[rgba(var(--theme-rgb),0.3)]"
+                      >
                         <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center gap-3">
                             <div className="w-2 h-8 rounded-full" style={{ backgroundColor: et.color }} />
                             <span className="text-lg font-medium text-gray-900 dark:text-white">{et.name}</span>
                           </div>
-                          <GrowthIndicator percentage={getEventGrowth(et.id)} />
+                          <div className="flex items-center gap-2">
+                            <GrowthIndicator percentage={getEventGrowth(et.id)} />
+                            <span className="text-[10px] uppercase text-gray-400">查看详情</span>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-y-6 gap-x-4">
                           <div>
                             <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{stats.maxStreak}</div>
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">Best Streak</div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">最长连胜</div>
                           </div>
                           <div>
                             <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{stats.maxGap}</div>
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">Worst Gap</div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">最长断档</div>
                           </div>
                           <div>
                             <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{stats.totalCount}</div>
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">Events</div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">次数</div>
                           </div>
                           <div>
                             <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{formatDuration(stats.totalDuration)}</div>
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">Time</div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">时长</div>
+                          </div>
+                          <div>
+                            <div className="text-xl font-light text-gray-900 dark:text-white font-mono">
+                              {extras.maxDuration === null ? '-' : formatDuration(extras.maxDuration)}
+                            </div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">最长一次</div>
+                          </div>
+                          <div>
+                            <div className="text-xl font-light text-gray-900 dark:text-white font-mono">
+                              {extras.minDuration === null ? '-' : formatDuration(extras.minDuration)}
+                            </div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">最短一次</div>
+                          </div>
+                          <div>
+                            <div className="text-xl font-light text-gray-900 dark:text-white font-mono">
+                              {extras.minGap === null ? '-' : formatDuration(extras.minGap)}
+                            </div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">最短间隔</div>
+                          </div>
+                          <div>
+                            <div className="text-xl font-light text-gray-900 dark:text-white font-mono">
+                              {durationStats.avg === null ? '-' : formatDuration(durationStats.avg)}
+                            </div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">平均时长</div>
+                          </div>
+                          <div>
+                            <div className="text-xl font-light text-gray-900 dark:text-white font-mono">
+                              {durationStats.median === null ? '-' : formatDuration(durationStats.median)}
+                            </div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">中位数时长</div>
+                          </div>
+                          <div>
+                            <div className="text-xl font-light text-gray-900 dark:text-white font-mono">
+                              {durationStats.p90 === null ? '-' : formatDuration(durationStats.p90)}
+                            </div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">P90 时长</div>
                           </div>
                         </div>
-                      </div>
+
+                        <div className="mt-6 space-y-4">
+                          <div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">时长分布（动态分箱）</div>
+                            {histogram.bins.length === 0 ? (
+                              <div className="text-xs text-gray-400">暂无完成记录</div>
+                            ) : (
+                              <div className="w-full">
+                                <svg viewBox="0 0 320 90" className="w-full h-20">
+                                  {histogram.bins.map((b, i) => {
+                                    const barWidth = 280 / histogram.bins.length;
+                                    const h = histogram.maxCount === 0 ? 0 : (b.count / histogram.maxCount) * 60;
+                                    const x = 20 + i * barWidth;
+                                    const y = 70 - h;
+                                    return (
+                                      <rect
+                                        key={i}
+                                        x={x}
+                                        y={y}
+                                        width={Math.max(2, barWidth - 4)}
+                                        height={h}
+                                        rx={2}
+                                        fill={et.color}
+                                        opacity={0.8}
+                                        data-tip={`${formatDuration(b.start)} - ${formatDuration(b.end)} · ${b.count} 次`}
+                                      />
+                                    );
+                                  })}
+                                  <line x1={20} y1={70} x2={300} y2={70} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                </svg>
+                                <div className="flex justify-between text-[10px] text-gray-400">
+                                  <span>{formatDuration(histogram.min)}</span>
+                                  <span>{formatDuration((histogram.min + histogram.max) / 2)}</span>
+                                  <span>{formatDuration(histogram.max)}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">单次时长</div>
+                              <div className="bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
+                                <button onClick={() => setSingleDurationChartType('line')} className={`px-2 py-0.5 rounded-md transition-all ${singleDurationChartType === 'line' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>折线</button>
+                                <button onClick={() => setSingleDurationChartType('bar')} className={`px-2 py-0.5 rounded-md transition-all ${singleDurationChartType === 'bar' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>柱状</button>
+                              </div>
+                            </div>
+                            {durationSeries.length < 2 ? (
+                              <div className="text-xs text-gray-400">数据不足</div>
+                            ) : (
+                              <svg viewBox="0 0 320 80" className="w-full h-16">
+                                {(() => {
+                                  const maxVal = Math.max(...durationSeries);
+                                  const minVal = Math.min(...durationSeries);
+                                  const range = Math.max(1, maxVal - minVal);
+                                  if (singleDurationChartType === 'bar') {
+                                    const barWidth = 280 / durationSeries.length;
+                                    return (
+                                      <>
+                                        {durationSeries.map((v, i) => {
+                                          const h = ((v - minVal) / range) * 40;
+                                          return (
+                                            <rect
+                                              key={i}
+                                              x={20 + i * barWidth}
+                                              y={60 - h}
+                                              width={Math.max(2, barWidth - 2)}
+                                              height={h}
+                                              rx={2}
+                                              fill={et.color}
+                                              opacity={0.8}
+                                              data-tip={`第${i + 1}次 · ${formatDuration(v)}`}
+                                            />
+                                          );
+                                        })}
+                                        <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                      </>
+                                    );
+                                  }
+                                  const points = durationSeries.map((v, i) => {
+                                    const x = 20 + (i / (durationSeries.length - 1)) * 280;
+                                    const y = 60 - ((v - minVal) / range) * 40;
+                                    return `${x},${y}`;
+                                  }).join(' ');
+                                  return (
+                                    <>
+                                      <polyline points={points} fill="none" stroke={et.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                      {durationSeries.map((v, i) => {
+                                        const x = 20 + (i / (durationSeries.length - 1)) * 280;
+                                        const y = 60 - ((v - minVal) / range) * 40;
+                                        return (
+                                          <circle key={i} cx={x} cy={y} r={3} fill={et.color} opacity={0.8} data-tip={`第${i + 1}次 · ${formatDuration(v)}`} />
+                                        );
+                                      })}
+                                      <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                    </>
+                                  );
+                                })()}
+                              </svg>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">间隔（对数）</div>
+                              <div className="bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
+                                <button onClick={() => setSingleGapChartType('line')} className={`px-2 py-0.5 rounded-md transition-all ${singleGapChartType === 'line' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>折线</button>
+                                <button onClick={() => setSingleGapChartType('bar')} className={`px-2 py-0.5 rounded-md transition-all ${singleGapChartType === 'bar' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>柱状</button>
+                              </div>
+                            </div>
+                            {gapSeries.length < 2 ? (
+                              <div className="text-xs text-gray-400">数据不足</div>
+                            ) : (
+                              <svg viewBox="0 0 320 80" className="w-full h-16">
+                                {(() => {
+                                  const logVals = gapSeries.map(v => Math.log10(v + 1));
+                                  const maxVal = Math.max(...logVals);
+                                  const minVal = Math.min(...logVals);
+                                  const range = Math.max(1e-6, maxVal - minVal);
+                                  if (singleGapChartType === 'bar') {
+                                    const barWidth = 280 / logVals.length;
+                                    return (
+                                      <>
+                                        {logVals.map((v, i) => {
+                                          const h = ((v - minVal) / range) * 40;
+                                          return (
+                                            <rect
+                                              key={i}
+                                              x={20 + i * barWidth}
+                                              y={60 - h}
+                                              width={Math.max(2, barWidth - 2)}
+                                              height={h}
+                                              rx={2}
+                                              fill={et.color}
+                                              opacity={0.8}
+                                              data-tip={`间隔${i + 1} · ${formatDuration(gapSeries[i] || 0)}`}
+                                            />
+                                          );
+                                        })}
+                                        <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                      </>
+                                    );
+                                  }
+                                  const points = logVals.map((v, i) => {
+                                    const x = 20 + (i / (logVals.length - 1)) * 280;
+                                    const y = 60 - ((v - minVal) / range) * 40;
+                                    return `${x},${y}`;
+                                  }).join(' ');
+                                  return (
+                                    <>
+                                      <polyline points={points} fill="none" stroke={et.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                      {logVals.map((v, i) => {
+                                        const x = 20 + (i / (logVals.length - 1)) * 280;
+                                        const y = 60 - ((v - minVal) / range) * 40;
+                                        return (
+                                          <circle key={i} cx={x} cy={y} r={3} fill={et.color} opacity={0.8} data-tip={`间隔${i + 1} · ${formatDuration(gapSeries[i] || 0)}`} />
+                                        );
+                                      })}
+                                      <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                    </>
+                                  );
+                                })()}
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -2120,46 +3157,683 @@ export default function App() {
             )}
 
             {/* Charts (Existing) with Controls */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              <div className="lg:col-span-2 bg-white dark:bg-[#1e2330] p-6 rounded-[24px]">
-                <div className="flex items-center justify-between mb-6">
-                  <h4 className="font-bold text-gray-700 dark:text-gray-200 text-sm">趋势变化</h4>
-                  <div className="flex gap-2">
-                    <div className="bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
-                      <button onClick={() => setTrendPeriod('day')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'day' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] dark:text-[rgba(var(--theme-rgb),0.6)] font-bold' : 'text-gray-500'}`}>日</button>
-                      <button onClick={() => setTrendPeriod('week')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'week' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] dark:text-[rgba(var(--theme-rgb),0.6)] font-bold' : 'text-gray-500'}`}>周</button>
-                      <button onClick={() => setTrendPeriod('month')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'month' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] dark:text-[rgba(var(--theme-rgb),0.6)] font-bold' : 'text-gray-500'}`}>月</button>
+            {detailEventId && (() => {
+              const detailEvent = eventTypes.find(e => e.id === detailEventId);
+              if (!detailEvent) return null;
+              const detailSessions = filteredSessions.filter(s => s.eventId === detailEvent.id);
+              const detailStats = calculateStats(detailSessions);
+              const detailExtras = getCompletionExtras(detailSessions);
+              const detailDurationStats = getDurationStats(detailSessions);
+              const detailHistogram = buildHistogram(detailSessions);
+              const detailDurationSeries = buildDurationSeries(detailSessions);
+              const detailGapSeries = buildGapSeries(detailSessions);
+              const detailCompleted = detailSessions.filter(s => s.endTime && !s.incomplete);
+              const detailBucketData = (() => {
+                if (detailCompleted.length === 0) return { bins: [], maxCount: 0, max: 0 };
+                const durationsMin = detailCompleted
+                  .map(s => (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 60000)
+                  .filter(v => v >= 0);
+                if (durationsMin.length === 0) return { bins: [], maxCount: 0, max: 0 };
+                const max = Math.max(...durationsMin);
+                const bucketSize = durationBucket;
+                const bucketCount = Math.max(1, Math.ceil(max / bucketSize));
+                const bins = Array.from({ length: bucketCount }, (_, i) => ({
+                  start: i * bucketSize,
+                  end: (i + 1) * bucketSize,
+                  count: 0
+                }));
+                durationsMin.forEach(v => {
+                  const idx = Math.min(bucketCount - 1, Math.floor(v / bucketSize));
+                  bins[idx].count += 1;
+                });
+                const maxCount = Math.max(...bins.map(b => b.count));
+                return { bins, maxCount, max };
+              })();
+              const detailStartDurationPoints = detailCompleted.map(s => {
+                const start = new Date(s.startTime);
+                const startMin = start.getHours() * 60 + start.getMinutes();
+                const durationMin = Math.max(0, (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 60000);
+                return { startMin, durationMin, start };
+              });
+              const detailTrendData = getTrendDataForSessions(detailSessions);
+              const detailHeatmapCount = getHeatmapDataForSessions(detailSessions, 'count');
+              const detailHeatmapDuration = getHeatmapDataForSessions(detailSessions, 'duration');
+              const detailSpectrumBase = getSpectrumRangeFromSessions(detailSessions, spectrumRange);
+              const detailSpectrumCompare = spectrumRange === 'all' ? [] : getSpectrumRangeFromSessions(detailSessions, spectrumRange, Number(spectrumRange));
+              const detailSpectrumShowCompare = spectrumRange !== 'all' && detailSpectrumCompare.length > 0;
+
+              return (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                  <div
+                    className="bg-white dark:bg-[#1e2330] w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-[28px] p-6 md:p-8 shadow-2xl relative m3-scrollbar"
+                    onMouseOver={handleChartTooltipMove}
+                    onMouseMove={handleChartTooltipMove}
+                    onMouseLeave={clearChartTooltip}
+                    onTouchStart={handleChartTooltipMove}
+                    onTouchMove={handleChartTooltipMove}
+                    onTouchEnd={clearChartTooltip}
+                  >
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-8 rounded-full" style={{ backgroundColor: detailEvent.color }} />
+                        <div>
+                          <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">{detailEvent.name}</h3>
+                          <p className="text-xs text-gray-400">单事件详细分析</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setDetailEventId(null)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <Icons.X size={18} />
+                      </button>
                     </div>
-                    <div className="bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
-                      <button onClick={() => setTrendMetric('count')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'count' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] dark:text-[rgba(var(--theme-rgb),0.6)] font-bold' : 'text-gray-500'}`}>次数</button>
-                      <button onClick={() => setTrendMetric('duration')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'duration' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] dark:text-[rgba(var(--theme-rgb),0.6)] font-bold' : 'text-gray-500'}`}>时长</button>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailStats.totalCount}</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">总次数</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{formatDuration(detailStats.totalDuration)}</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">总时长</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailExtras.maxDuration === null ? '-' : formatDuration(detailExtras.maxDuration)}</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">最长一次</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailExtras.minDuration === null ? '-' : formatDuration(detailExtras.minDuration)}</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">最短一次</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailExtras.minGap === null ? '-' : formatDuration(detailExtras.minGap)}</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">最短间隔</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailDurationStats.avg === null ? '-' : formatDuration(detailDurationStats.avg)}</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">平均时长</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailDurationStats.median === null ? '-' : formatDuration(detailDurationStats.median)}</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">中位数</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailDurationStats.p90 === null ? '-' : formatDuration(detailDurationStats.p90)}</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">P90 时长</div>
+                      </div>
                     </div>
+
+                    <div className="space-y-6">
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">时长分布（动态分箱）</div>
+                          <span data-tip="根据完成时长自动分箱，Y 为频次。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        {detailHistogram.bins.length === 0 ? (
+                          <div className="text-xs text-gray-400">暂无完成记录</div>
+                        ) : (
+                          <div className="w-full">
+                            <svg viewBox="0 0 720 200" className="w-full h-48">
+                              {detailHistogram.bins.map((b, i) => {
+                                const barWidth = 640 / detailHistogram.bins.length;
+                                const h = detailHistogram.maxCount === 0 ? 0 : (b.count / detailHistogram.maxCount) * 140;
+                                const x = 40 + i * barWidth;
+                                const y = 170 - h;
+                                return (
+                                  <rect
+                                    key={i}
+                                    x={x}
+                                    y={y}
+                                    width={Math.max(4, barWidth - 6)}
+                                    height={h}
+                                    rx={3}
+                                    fill={detailEvent.color}
+                                    opacity={0.8}
+                                    data-tip={`${formatDuration(b.start)} - ${formatDuration(b.end)} · ${b.count} 次`}
+                                  />
+                                );
+                              })}
+                              <line x1={40} y1={170} x2={680} y2={170} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                            </svg>
+                            <div className="flex justify-between text-[10px] text-gray-400">
+                              <span>{formatDuration(detailHistogram.min)}</span>
+                              <span>{formatDuration((detailHistogram.min + detailHistogram.max) / 2)}</span>
+                              <span>{formatDuration(detailHistogram.max)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">时长分布（固定分箱）</div>
+                            <span data-tip="按固定桶宽统计频次。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
+                            <button onClick={() => setDurationBucket(1)} className={`px-2 py-0.5 rounded-md transition-all ${durationBucket === 1 ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>1分钟</button>
+                            <button onClick={() => setDurationBucket(5)} className={`px-2 py-0.5 rounded-md transition-all ${durationBucket === 5 ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>5分钟</button>
+                            <button onClick={() => setDurationBucket(15)} className={`px-2 py-0.5 rounded-md transition-all ${durationBucket === 15 ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>15分钟</button>
+                          </div>
+                        </div>
+                        {detailBucketData.bins.length === 0 ? (
+                          <div className="text-xs text-gray-400">暂无完成记录</div>
+                        ) : (
+                          <div className="w-full">
+                            <svg viewBox="0 0 720 200" className="w-full h-48">
+                              {detailBucketData.bins.map((b, i) => {
+                                const barWidth = 640 / detailBucketData.bins.length;
+                                const h = detailBucketData.maxCount === 0 ? 0 : (b.count / detailBucketData.maxCount) * 140;
+                                const x = 40 + i * barWidth;
+                                const y = 170 - h;
+                                return (
+                                  <rect
+                                    key={i}
+                                    x={x}
+                                    y={y}
+                                    width={Math.max(4, barWidth - 6)}
+                                    height={h}
+                                    rx={3}
+                                    fill={detailEvent.color}
+                                    opacity={0.8}
+                                    data-tip={`${b.start}-${b.end} 分钟 · ${b.count} 次`}
+                                  />
+                                );
+                              })}
+                              <line x1={40} y1={170} x2={680} y2={170} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                            </svg>
+                            <div className="flex justify-between text-[10px] text-gray-400">
+                              <span>0分钟</span>
+                              <span>{Math.round(detailBucketData.max / 2)}分钟</span>
+                              <span>{Math.round(detailBucketData.max)}分钟</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">单次时长</div>
+                            <span data-tip="每次完成的时长序列。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
+                            <button onClick={() => setSingleDurationChartType('line')} className={`px-2 py-0.5 rounded-md transition-all ${singleDurationChartType === 'line' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>折线</button>
+                            <button onClick={() => setSingleDurationChartType('bar')} className={`px-2 py-0.5 rounded-md transition-all ${singleDurationChartType === 'bar' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>柱状</button>
+                          </div>
+                        </div>
+                        {detailDurationSeries.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 180" className="w-full h-44">
+                            {(() => {
+                              const maxVal = Math.max(...detailDurationSeries);
+                              const minVal = Math.min(...detailDurationSeries);
+                              const range = Math.max(1, maxVal - minVal);
+                              if (singleDurationChartType === 'bar') {
+                                const barWidth = 640 / detailDurationSeries.length;
+                                return (
+                                  <>
+                                    {detailDurationSeries.map((v, i) => {
+                                      const h = ((v - minVal) / range) * 120;
+                                      return (
+                                        <rect
+                                          key={i}
+                                          x={40 + i * barWidth}
+                                          y={150 - h}
+                                          width={Math.max(4, barWidth - 4)}
+                                          height={h}
+                                          rx={2}
+                                          fill={detailEvent.color}
+                                          opacity={0.8}
+                                          data-tip={`第${i + 1}次 · ${formatDuration(v)}`}
+                                        />
+                                      );
+                                    })}
+                                    <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  </>
+                                );
+                              }
+                              const points = detailDurationSeries.map((v, i) => {
+                                const x = 40 + (i / (detailDurationSeries.length - 1)) * 640;
+                                const y = 150 - ((v - minVal) / range) * 120;
+                                return `${x},${y}`;
+                              }).join(' ');
+                              return (
+                                <>
+                                  <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  {detailDurationSeries.map((v, i) => {
+                                    const x = 40 + (i / (detailDurationSeries.length - 1)) * 640;
+                                    const y = 150 - ((v - minVal) / range) * 120;
+                                    return (
+                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`第${i + 1}次 · ${formatDuration(v)}`} />
+                                    );
+                                  })}
+                                  <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">间隔（对数）</div>
+                            <span data-tip="本次开始-上次结束的间隔，使用对数坐标。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
+                            <button onClick={() => setSingleGapChartType('line')} className={`px-2 py-0.5 rounded-md transition-all ${singleGapChartType === 'line' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>折线</button>
+                            <button onClick={() => setSingleGapChartType('bar')} className={`px-2 py-0.5 rounded-md transition-all ${singleGapChartType === 'bar' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>柱状</button>
+                          </div>
+                        </div>
+                        {detailGapSeries.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 180" className="w-full h-44">
+                            {(() => {
+                              const logVals = detailGapSeries.map(v => Math.log10(v + 1));
+                              const maxVal = Math.max(...logVals);
+                              const minVal = Math.min(...logVals);
+                              const range = Math.max(1e-6, maxVal - minVal);
+                              if (singleGapChartType === 'bar') {
+                                const barWidth = 640 / logVals.length;
+                                return (
+                                  <>
+                                    {logVals.map((v, i) => {
+                                      const h = ((v - minVal) / range) * 120;
+                                      return (
+                                        <rect
+                                          key={i}
+                                          x={40 + i * barWidth}
+                                          y={150 - h}
+                                          width={Math.max(4, barWidth - 4)}
+                                          height={h}
+                                          rx={2}
+                                          fill={detailEvent.color}
+                                          opacity={0.8}
+                                          data-tip={`间隔${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`}
+                                        />
+                                      );
+                                    })}
+                                    <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  </>
+                                );
+                              }
+                              const points = logVals.map((v, i) => {
+                                const x = 40 + (i / (logVals.length - 1)) * 640;
+                                const y = 150 - ((v - minVal) / range) * 120;
+                                return `${x},${y}`;
+                              }).join(' ');
+                              return (
+                                <>
+                                  <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  {logVals.map((v, i) => {
+                                    const x = 40 + (i / (logVals.length - 1)) * 640;
+                                    const y = 150 - ((v - minVal) / range) * 120;
+                                    return (
+                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`间隔${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`} />
+                                    );
+                                  })}
+                                  <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">开始时间-时长散点</div>
+                          <span data-tip="X: 开始时间；Y: 本次时长分钟。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        {detailStartDurationPoints.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 220" className="w-full h-52">
+                            {(() => {
+                              const maxY = Math.max(...detailStartDurationPoints.map(p => p.durationMin), 1);
+                              return (
+                                <>
+                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  {detailStartDurationPoints.map((p, idx) => {
+                                    const x = 50 + (p.startMin / 1440) * 620;
+                                    const y = 180 - (p.durationMin / maxY) * 140;
+                                    return (
+                                      <circle
+                                        key={idx}
+                                        cx={x}
+                                        cy={y}
+                                        r={3}
+                                        fill={detailEvent.color}
+                                        opacity={0.75}
+                                        data-tip={`开始 ${formatHourMinute(p.start)} · 时长 ${formatDuration(p.durationMin * 60)}`}
+                                      />
+                                    );
+                                  })}
+                                  <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>00:00</text>
+                                  <text x={650} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>24:00</text>
+                                  <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0分钟</text>
+                                  <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxY)}分钟</text>
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">间隔-时长散点</div>
+                          <span data-tip="X: 间隔小时；Y: 本次时长小时。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        {detailDurationSeries.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 220" className="w-full h-52">
+                            {(() => {
+                              const completed = detailSessions
+                                .filter(s => s.endTime && !s.incomplete)
+                                .sort((a, b) => new Date(a.endTime!).getTime() - new Date(b.endTime!).getTime());
+                              const points = completed.slice(1).map((s, i) => {
+                                const prevEnd = new Date(completed[i].endTime!).getTime();
+                                const currStart = new Date(s.startTime).getTime();
+                                const gapHours = Math.max(0, (currStart - prevEnd) / 3600000);
+                                const durationHours = Math.max(0, (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 3600000);
+                                return { gapHours, durationHours };
+                              });
+                              if (points.length === 0) return null;
+                              const maxX = Math.max(...points.map(p => p.gapHours), 1);
+                              const maxY = Math.max(...points.map(p => p.durationHours), 1);
+                              return (
+                                <>
+                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  {points.map((p, idx) => {
+                                    const x = 50 + (p.gapHours / maxX) * 620;
+                                    const y = 180 - (p.durationHours / maxY) * 140;
+                                    return (
+                                      <circle key={idx} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.75} data-tip={`间隔 ${p.gapHours.toFixed(2)}小时 · 时长 ${p.durationHours.toFixed(2)}小时`} />
+                                    );
+                                  })}
+                                  <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0小时</text>
+                                  <text x={660} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{maxX.toFixed(1)}小时</text>
+                                  <text x={12} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0小时</text>
+                                  <text x={12} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{maxY.toFixed(1)}小时</text>
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">累计投入曲线</div>
+                          <span data-tip="X: 累计次数百分比；Y: 累计时长百分比。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        {detailDurationSeries.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 220" className="w-full h-52">
+                            {(() => {
+                              const durations = detailDurationSeries.slice().sort((a, b) => a - b);
+                              const total = durations.reduce((a, b) => a + b, 0);
+                              let cumulative = 0;
+                              const points = durations.map((d, i) => {
+                                cumulative += d;
+                                const x = (i + 1) / durations.length;
+                                const y = total === 0 ? 0 : cumulative / total;
+                                return { x, y };
+                              });
+                              const path = points.map((p, i) => {
+                                const x = 50 + p.x * 620;
+                                const y = 180 - p.y * 140;
+                                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                              }).join(' ');
+                              return (
+                                <>
+                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <path d={path} fill="none" stroke={detailEvent.color} strokeWidth={2} />
+                                  {points.map((p, i) => {
+                                    const x = 50 + p.x * 620;
+                                    const y = 180 - p.y * 140;
+                                    return (
+                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`累计次数 ${(p.x * 100).toFixed(1)}% · 累计时长 ${(p.y * 100).toFixed(1)}%`} />
+                                    );
+                                  })}
+                                  <line x1={50} y1={180} x2={690} y2={40} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="4" />
+                                  <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0%</text>
+                                  <text x={670} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>100%</text>
+                                  <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0%</text>
+                                  <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>100%</text>
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">留存概率</div>
+                          <span data-tip="X: 已坚持分钟；Y: 继续坚持的概率。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        {detailDurationSeries.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 220" className="w-full h-52">
+                            {(() => {
+                              const durationsMin = detailDurationSeries.map(v => v / 60).sort((a, b) => a - b);
+                              const total = durationsMin.length;
+                              const unique = Array.from(new Set(durationsMin));
+                              const points = unique.map(val => {
+                                const survivors = durationsMin.filter(d => d >= val).length;
+                                return { x: val, y: survivors / total };
+                              });
+                              const maxX = Math.max(...points.map(p => p.x), 1);
+                              const path = points.map((p, i) => {
+                                const x = 50 + (p.x / maxX) * 620;
+                                const y = 180 - p.y * 140;
+                                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                              }).join(' ');
+                              return (
+                                <>
+                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <path d={path} fill="none" stroke={detailEvent.color} strokeWidth={2} />
+                                  {points.map((p, i) => {
+                                    const x = 50 + (p.x / maxX) * 620;
+                                    const y = 180 - p.y * 140;
+                                    return (
+                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`坚持 ${p.x.toFixed(1)} 分钟后继续概率 ${(p.y * 100).toFixed(1)}%`} />
+                                    );
+                                  })}
+                                  <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0分钟</text>
+                                  <text x={660} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxX)}分钟</text>
+                                  <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0%</text>
+                                  <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>100%</text>
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">日时长标准差</div>
+                          <span data-tip="按周/按月统计每天时长的标准差（不含零值日）。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        {detailSessions.filter(s => s.endTime).length < 3 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 220" className="w-full h-52">
+                            {(() => {
+                              const period = trendPeriod === 'day' ? 'week' : trendPeriod;
+                              const buckets = new Map<string, number[]>();
+                              detailSessions.filter(s => s.endTime).forEach(s => {
+                                const end = new Date(s.endTime!);
+                                let key = '';
+                                if (period === 'week') {
+                                  const d = new Date(end);
+                                  d.setDate(d.getDate() - (d.getDay() - settings.weekStart + 7) % 7);
+                                  key = getDayKey(d);
+                                } else {
+                                  key = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}`;
+                                }
+                                const dayKey = getDayKey(end);
+                                const duration = (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 3600_000;
+                                const mapKey = `${key}-${dayKey}`;
+                                if (!buckets.has(mapKey)) buckets.set(mapKey, []);
+                                buckets.get(mapKey)!.push(duration);
+                              });
+
+                              const periodMap = new Map<string, number[]>();
+                              buckets.forEach((vals, key) => {
+                                const periodKey = key.split('-').slice(0, period === 'week' ? 3 : 2).join('-');
+                                const total = vals.reduce((a, b) => a + b, 0);
+                                if (!periodMap.has(periodKey)) periodMap.set(periodKey, []);
+                                periodMap.get(periodKey)!.push(total);
+                              });
+
+                              const series = Array.from(periodMap.entries())
+                                .sort((a, b) => a[0].localeCompare(b[0]))
+                                .map(([key, totals]) => {
+                                  const nonZero = totals.filter(v => v > 0);
+                                  if (nonZero.length === 0) return { key, std: 0 };
+                                  const mean = nonZero.reduce((a, b) => a + b, 0) / nonZero.length;
+                                  const variance = nonZero.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / nonZero.length;
+                                  return { key, std: Math.sqrt(variance) };
+                                });
+                              if (series.length < 2) return null;
+                              const maxVal = Math.max(...series.map(s => s.std), 1e-3);
+                              const points = series.map((s, i) => {
+                                const x = 50 + (i / (series.length - 1)) * 620;
+                                const y = 180 - (s.std / maxVal) * 140;
+                                return `${x},${y}`;
+                              }).join(' ');
+                              return (
+                                <>
+                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth={2} />
+                                  {series.map((s, i) => {
+                                    const x = 50 + (i / (series.length - 1)) * 620;
+                                    const y = 180 - (s.std / maxVal) * 140;
+                                    return (
+                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`${s.key} · 标准差 ${s.std.toFixed(2)}小时`} />
+                                    );
+                                  })}
+                                  <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0小时</text>
+                                  <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{maxVal.toFixed(1)}小时</text>
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-8 space-y-6">
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            趋势图
+                            <span data-tip="按日/周/月聚合的次数或时长趋势。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                              <button onClick={() => setTrendPeriod('day')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'day' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>日</button>
+                              <button onClick={() => setTrendPeriod('week')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'week' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>周</button>
+                              <button onClick={() => setTrendPeriod('month')} className={`px-2 py-1 rounded-md transition-all ${trendPeriod === 'month' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>月</button>
+                            </div>
+                            <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                              <button onClick={() => setTrendMetric('count')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'count' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>次数</button>
+                              <button onClick={() => setTrendMetric('duration')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'duration' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>时长</button>
+                            </div>
+                            <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                              <button onClick={() => setTrendChartType('line')} className={`px-2 py-1 rounded-md transition-all ${trendChartType === 'line' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>折线</button>
+                              <button onClick={() => setTrendChartType('bar')} className={`px-2 py-1 rounded-md transition-all ${trendChartType === 'bar' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>柱状</button>
+                            </div>
+                          </div>
+                        </div>
+                        <TrendChart data={detailTrendData} events={[detailEvent]} metric={trendMetric} darkMode={settings.darkMode} period={trendPeriod} chartType={trendChartType} />
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
+                          周分布雷达
+                          <span data-tip="完整周内各星期的总时长分布。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        <WeeklyRadarChart sessions={detailSessions.filter(s => s.endTime)} darkMode={settings.darkMode} />
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                          <HeatmapCalendar title="活跃频率" dataMap={detailHeatmapCount} color={detailEvent.color} unit="次" weekStart={settings.weekStart} darkMode={settings.darkMode} />
+                        </div>
+                        <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                          <HeatmapCalendar title="投入时间" dataMap={detailHeatmapDuration} color={detailEvent.color} unit="秒" weekStart={settings.weekStart} darkMode={settings.darkMode} />
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            光谱分布
+                            <span data-tip="时段覆盖强度分布，可切换周期/维度/配色。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                              <button onClick={() => setSpectrumRange('7')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === '7' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>7天</button>
+                              <button onClick={() => setSpectrumRange('30')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === '30' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>30天</button>
+                              <button onClick={() => setSpectrumRange('all')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === 'all' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>全部</button>
+                            </div>
+                            <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                              <button onClick={() => setSpectrumMode('1d')} className={`px-2 py-1 rounded-md transition-all ${spectrumMode === '1d' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>一维</button>
+                              <button onClick={() => setSpectrumMode('2d')} className={`px-2 py-1 rounded-md transition-all ${spectrumMode === '2d' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>二维</button>
+                            </div>
+                            <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                              <button onClick={() => setSpectrumPalette('mono')} className={`px-2 py-1 rounded-md transition-all ${spectrumPalette === 'mono' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>纯色</button>
+                              <button onClick={() => setSpectrumPalette('thermal')} className={`px-2 py-1 rounded-md transition-all ${spectrumPalette === 'thermal' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>冷热色</button>
+                            </div>
+                          </div>
+                        </div>
+                        <DailyTimelineSpectrum
+                          sessions={detailSpectrumBase}
+                          compareSessions={detailSpectrumCompare}
+                          showComparison={detailSpectrumShowCompare}
+                          color={detailEvent.color}
+                          mode={spectrumMode}
+                          palette={spectrumPalette}
+                        />
+                      </div>
+                    </div>
+                    {chartTooltip && (
+                      <div
+                        className="pointer-events-none absolute z-50 bg-gray-900/90 text-white text-xs px-2 py-1 rounded-lg shadow-lg"
+                        style={{ left: chartTooltip.x, top: chartTooltip.y }}
+                      >
+                        {chartTooltip.text}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <TrendChart data={trendData} events={eventTypes.filter(e => statsSelectedIds.includes(e.id))} metric={trendMetric} darkMode={settings.darkMode} />
+              );
+            })()}
+            {!detailEventId && chartTooltip && (
+              <div
+                className="pointer-events-none absolute z-50 bg-gray-900/90 text-white text-xs px-2 py-1 rounded-lg shadow-lg"
+                style={{ left: chartTooltip.x, top: chartTooltip.y }}
+              >
+                {chartTooltip.text}
               </div>
-              <div className="bg-white dark:bg-[#1e2330] p-6 rounded-[24px]">
-                <h4 className="font-bold text-gray-700 dark:text-gray-200 text-sm mb-6">周分布雷达</h4>
-                <WeeklyRadarChart sessions={filteredSessions.filter(s => s.endTime && statsSelectedIds.includes(s.eventId))} darkMode={settings.darkMode} />
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="bg-white dark:bg-[#1e2330] p-6 rounded-[24px]">
-                <HeatmapCalendar title="活跃频率" dataMap={getHeatmapData('count')} color={settings.themeColor} unit="次" weekStart={settings.weekStart} darkMode={settings.darkMode} />
-              </div>
-              <div className="bg-white dark:bg-[#1e2330] p-6 rounded-[24px]">
-                <HeatmapCalendar title="投入时间" dataMap={getHeatmapData('duration')} color={settings.themeColor} unit="秒" weekStart={settings.weekStart} darkMode={settings.darkMode} />
-              </div>
-            </div>
-            <DailyTimelineSpectrum sessions={sessions.filter(s => {
-              if (!s.endTime || !statsSelectedIds.includes(s.eventId)) return false;
-              if (filterTags.length > 0) {
-                const et = eventTypes.find(e => e.id === s.eventId);
-                if (!filterTags.some(t => et?.tags?.includes(t))) return false;
-              }
-              return true;
-            })} color={settings.themeColor} darkMode={settings.darkMode} />
+            )}
           </div>
         )}
 
@@ -2177,7 +3851,7 @@ export default function App() {
                     <div className="w-10 h-10 rounded-full bg-[rgba(var(--theme-rgb),0.2)] text-[rgb(var(--theme-rgb))] flex items-center justify-center font-bold">{user.email?.[0].toUpperCase() || 'U'}</div>
                     <div>
                       <div className="font-bold dark:text-white">{user.email || '匿名用户'}</div>
-                      <div className="text-xs text-gray-400">UID: {user.uid.slice(0, 8)}...</div>
+                      <div className="text-xs text-gray-400">用户ID: {user.uid.slice(0, 8)}...</div>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -2245,8 +3919,8 @@ export default function App() {
                       {et.goal && (
                         <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 bg-white dark:bg-black/20 px-2 py-1 rounded-md border border-gray-100 dark:border-gray-700">
                           {et.goal.type === 'negative' ? <span className="text-red-400">≤</span> : <span className="text-green-500">≥</span>}
-                          <span>{et.goal.metric === 'duration' ? (et.goal.targetValue / 3600).toFixed(1) + 'h' : et.goal.targetValue}</span>
-                          <span className="opacity-50">/ {et.goal.period === 'week' ? 'wk' : 'mo'}</span>
+                          <span>{et.goal.metric === 'duration' ? (et.goal.targetValue / 3600).toFixed(1) + '小时' : et.goal.targetValue}</span>
+                          <span className="opacity-50">/ {et.goal.period === 'week' ? '周' : '月'}</span>
                         </div>
                       )}
                       <Icons.Edit2 size={14} className="text-gray-300 group-hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -2296,8 +3970,8 @@ export default function App() {
                   <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-200">停止模式</span>
                     <select value={settings.stopMode} onChange={e => toggleSetting('stopMode', e.target.value)} className="bg-white dark:bg-gray-600 px-2 py-1.5 rounded-lg text-sm font-medium shadow-sm text-gray-700 dark:text-gray-200 outline-none border-none">
-                      <option value="quick">❤️ 点按即停 (Quick)</option>
-                      <option value="interactive">📝 详细记录 (Interactive)</option>
+                      <option value="quick">❤️ 点按即停（快速）</option>
+                      <option value="interactive">📝 详细记录（详细）</option>
                     </select>
                   </div>
                 </div>
@@ -2321,35 +3995,14 @@ export default function App() {
           </div>
         )}
 
-        {/* MODALS */}
-        {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onLoginSuccess={() => setShowAuthModal(false)} />}
-        {editingSession && <SessionModal session={editingSession} eventTypes={eventTypes} onClose={() => setEditingSession(null)} onSave={handleUpdateSession} onDelete={handleDeleteSession} isAddMode={false} darkMode={settings.darkMode} />}
-        {isAddMode && <SessionModal session={null} eventTypes={eventTypes} onClose={() => setIsAddMode(false)} onSave={handleAddSession} isAddMode={true} darkMode={settings.darkMode} />}
-        {editingEventType && <EditEventModal eventType={editingEventType} onClose={() => setEditingEventType(null)} onSave={handleSaveEventType} onDelete={handleDeleteEvent} darkMode={settings.darkMode} />}
-        {stoppingSessionId && <StopSessionModal onClose={() => setStoppingSessionId(null)} onStop={(n: string, inc: boolean, r: number) => handleStop(stoppingSessionId, n, inc, r)} />}
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/80 dark:bg-gray-900/85 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-800/50 flex justify-around items-center h-14 z-50 px-2 pb-safe shadow-lg transition-all duration-300">
-        {[
-          { id: 'home', icon: Icons.LayoutGrid, label: '主页', color: '#4285F4' },
-          { id: 'history', icon: Icons.History, label: '历史', color: '#EA4335' },
-          { id: 'stats', icon: Icons.BarChart2, label: '统计', color: '#FBBC05' },
-          { id: 'settings', icon: Icons.Settings, label: '设置', color: '#34A853' }
-        ].map(item => {
-          const isActive = view === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setView(item.id as any)}
-              className={`flex items-center justify-center w-full h-full ${isActive ? '' : 'text-gray-400 dark:text-gray-500'} transition-all active:scale-95`}
-              style={isActive ? { color: item.color } : {}}
-            >
-              <item.icon size={28} strokeWidth={isActive ? 2.5 : 2} style={isActive ? { filter: `drop-shadow(0 0 8px ${item.color}40)` } : {}} />
-            </button>
-          );
-        })}
-      </nav>
+      {/* MODALS */}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onLoginSuccess={() => setShowAuthModal(false)} />}
+      {editingSession && <SessionModal session={editingSession} eventTypes={eventTypes} onClose={() => setEditingSession(null)} onSave={handleUpdateSession} onDelete={handleDeleteSession} isAddMode={false} darkMode={settings.darkMode} />}
+      {isAddMode && <SessionModal session={null} eventTypes={eventTypes} onClose={() => setIsAddMode(false)} onSave={handleAddSession} isAddMode={true} darkMode={settings.darkMode} />}
+      {editingEventType && <EditEventModal eventType={editingEventType} onClose={() => setEditingEventType(null)} onSave={handleSaveEventType} onDelete={handleDeleteEvent} darkMode={settings.darkMode} />}
+      {stoppingSessionId && <StopSessionModal onClose={() => setStoppingSessionId(null)} onStop={(n: string, inc: boolean, r: number) => handleStop(stoppingSessionId, n, inc, r)} />}
     </div>
   );
 }
