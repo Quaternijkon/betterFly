@@ -3486,6 +3486,54 @@ export default function App() {
                     <div className="space-y-6">
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">四象限散点（时间-时长）</div>
+                          <span data-tip="X: 一天内开始时间（分钟）；Y: 单次时长（分钟）；原点为 12:00 与 P50 时长。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        {detailStartDurationPoints.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 220" className="w-full h-52">
+                            {(() => {
+                              const medianMinutes = detailDurationStats.median === null ? 0 : detailDurationStats.median / 60;
+                              const maxY = Math.max(...detailStartDurationPoints.map(p => p.durationMin), medianMinutes, 1);
+                              const originX = 50 + (720 / 2 / 720) * 620; // 12:00 -> 中点
+                              const originY = 180 - (medianMinutes / maxY) * 140;
+                              return (
+                                <>
+                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={originX} y1={30} x2={originX} y2={180} stroke={settings.darkMode ? '#6b7280' : '#9ca3af'} strokeDasharray="4" />
+                                  <line x1={50} y1={originY} x2={690} y2={originY} stroke={settings.darkMode ? '#6b7280' : '#9ca3af'} strokeDasharray="4" />
+                                  {detailStartDurationPoints.map((p, idx) => {
+                                    const x = 50 + (p.startMin / 1440) * 620;
+                                    const y = 180 - (p.durationMin / maxY) * 140;
+                                    return (
+                                      <circle
+                                        key={idx}
+                                        cx={x}
+                                        cy={y}
+                                        r={3}
+                                        fill={detailEvent.color}
+                                        opacity={0.75}
+                                        data-tip={`开始 ${formatHourMinute(p.start)} · 时长 ${Math.round(p.durationMin)} 分钟`}
+                                      />
+                                    );
+                                  })}
+                                  <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>00:00</text>
+                                  <text x={originX - 12} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>12:00</text>
+                                  <text x={650} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>24:00</text>
+                                  <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0分钟</text>
+                                  <text x={18} y={originY + 4} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>P50</text>
+                                  <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxY)}分钟</text>
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-2">
                           <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">开始时间-时长散点</div>
                           <span data-tip="X: 开始时间；Y: 本次时长分钟。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                         </div>
