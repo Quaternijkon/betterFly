@@ -609,7 +609,7 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
   };
 
   const buildHeatGrid = (data: any[]) => {
-    const grid = Array.from({ length: 7 }, () => new Int32Array(24));
+    const grid = Array.from({ length: 7 }, () => new Int32Array(1440));
     data.forEach((s: any) => {
       if (!s.startTime) return;
       const start = new Date(s.startTime);
@@ -619,9 +619,9 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
       const temp = new Date(start);
       while (temp <= end) {
         const day = temp.getDay();
-        const hour = temp.getHours();
-        grid[day][hour] += 1;
-        temp.setMinutes(temp.getMinutes() + 5);
+        const minute = temp.getHours() * 60 + temp.getMinutes();
+        grid[day][minute] += 1;
+        temp.setMinutes(temp.getMinutes() + 1);
       }
     });
     return grid;
@@ -684,11 +684,11 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
     grid.forEach(row => row.forEach(v => { maxCount = Math.max(maxCount, v); }));
     if (maxCount === 0) maxCount = 1;
 
-    const cellW = width / 24;
+    const cellW = width / 1440;
     const cellH = height / 7;
     for (let d = 0; d < 7; d++) {
-      for (let h = 0; h < 24; h++) {
-        const val = grid[d][h];
+      for (let m = 0; m < 1440; m++) {
+        const val = grid[d][m];
         if (val === 0) continue;
         const t = val / maxCount;
         if (palette === 'thermal') {
@@ -698,7 +698,7 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
           ctx.fillStyle = color;
           ctx.globalAlpha = 0.2 + t * 0.8;
         }
-        ctx.fillRect(h * cellW, d * cellH, cellW, cellH);
+        ctx.fillRect(m * cellW, d * cellH, cellW, cellH);
       }
     }
 
@@ -737,14 +737,16 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
       return;
     }
     if (dataset.current.type === '2d' && dataset.current.grid) {
-      const col = Math.min(23, Math.max(0, Math.floor((x / rect.width) * 24)));
+      const col = Math.min(1439, Math.max(0, Math.floor((x / rect.width) * 1440)));
       const row = Math.min(6, Math.max(0, Math.floor((y / rect.height) * 7)));
       const count = dataset.current.grid[row]?.[col] || 0;
       const dayLabel = row === 0 ? 7 : row; // 1-7 display
+      const hour = Math.floor(col / 60);
+      const minute = col % 60;
       setTooltip({
         x: x + 8,
         y: y + 8,
-        text: `星期${dayLabel} ${String(col).padStart(2, '0')}:00 覆盖 ${count} 次`
+        text: `星期${dayLabel} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} 覆盖 ${count} 次`
       });
     }
   };
@@ -3012,11 +3014,14 @@ export default function App() {
                                     );
                                   })}
                                   <line x1={20} y1={70} x2={300} y2={70} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <text x={6} y={70} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0</text>
+                                  <text x={6} y={40} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(histogram.maxCount / 2)}</text>
+                                  <text x={6} y={12} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{histogram.maxCount}</text>
                                 </svg>
                                 <div className="flex justify-between text-[10px] text-gray-400">
-                                  <span>{formatDuration(histogram.min)}</span>
-                                  <span>{formatDuration((histogram.min + histogram.max) / 2)}</span>
-                                  <span>{formatDuration(histogram.max)}</span>
+                                  {[0, 0.5, 1].map(pct => (
+                                    <span key={pct}>{formatDuration(histogram.min + (histogram.max - histogram.min) * pct)}</span>
+                                  ))}
                                 </div>
                               </div>
                             )}
@@ -3038,6 +3043,7 @@ export default function App() {
                                   const maxVal = Math.max(...durationSeries);
                                   const minVal = Math.min(...durationSeries);
                                   const range = Math.max(1, maxVal - minVal);
+                                  const midVal = (minVal + maxVal) / 2;
                                   if (singleDurationChartType === 'bar') {
                                     const barWidth = 280 / durationSeries.length;
                                     return (
@@ -3059,6 +3065,9 @@ export default function App() {
                                           );
                                         })}
                                         <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                        <text x={4} y={60} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(minVal)}</text>
+                                        <text x={4} y={40} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(midVal)}</text>
+                                        <text x={4} y={20} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxVal)}</text>
                                       </>
                                     );
                                   }
@@ -3078,6 +3087,9 @@ export default function App() {
                                         );
                                       })}
                                       <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                      <text x={4} y={60} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(minVal)}</text>
+                                      <text x={4} y={40} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(midVal)}</text>
+                                      <text x={4} y={20} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxVal)}</text>
                                     </>
                                   );
                                 })()}
@@ -3102,6 +3114,9 @@ export default function App() {
                                   const maxVal = Math.max(...logVals);
                                   const minVal = Math.min(...logVals);
                                   const range = Math.max(1e-6, maxVal - minVal);
+                                  const rawMin = Math.min(...gapSeries);
+                                  const rawMax = Math.max(...gapSeries);
+                                  const rawMid = (rawMin + rawMax) / 2;
                                   if (singleGapChartType === 'bar') {
                                     const barWidth = 280 / logVals.length;
                                     return (
@@ -3123,6 +3138,9 @@ export default function App() {
                                           );
                                         })}
                                         <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                        <text x={4} y={60} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
+                                        <text x={4} y={40} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
+                                        <text x={4} y={20} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
                                       </>
                                     );
                                   }
@@ -3142,6 +3160,9 @@ export default function App() {
                                         );
                                       })}
                                       <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                      <text x={4} y={60} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
+                                      <text x={4} y={40} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
+                                      <text x={4} y={20} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
                                     </>
                                   );
                                 })()}
@@ -3292,11 +3313,14 @@ export default function App() {
                                 );
                               })}
                               <line x1={40} y1={170} x2={680} y2={170} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                              <text x={18} y={170} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0</text>
+                              <text x={18} y={100} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(detailHistogram.maxCount / 2)}</text>
+                              <text x={18} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{detailHistogram.maxCount}</text>
                             </svg>
                             <div className="flex justify-between text-[10px] text-gray-400">
-                              <span>{formatDuration(detailHistogram.min)}</span>
-                              <span>{formatDuration((detailHistogram.min + detailHistogram.max) / 2)}</span>
-                              <span>{formatDuration(detailHistogram.max)}</span>
+                              {[0, 0.25, 0.5, 0.75, 1].map(pct => (
+                                <span key={pct}>{formatDuration(detailHistogram.min + (detailHistogram.max - detailHistogram.min) * pct)}</span>
+                              ))}
                             </div>
                           </div>
                         )}
@@ -3339,11 +3363,14 @@ export default function App() {
                                 );
                               })}
                               <line x1={40} y1={170} x2={680} y2={170} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                              <text x={18} y={170} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0</text>
+                              <text x={18} y={100} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(detailBucketData.maxCount / 2)}</text>
+                              <text x={18} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{detailBucketData.maxCount}</text>
                             </svg>
                             <div className="flex justify-between text-[10px] text-gray-400">
-                              <span>0分钟</span>
-                              <span>{Math.round(detailBucketData.max / 2)}分钟</span>
-                              <span>{Math.round(detailBucketData.max)}分钟</span>
+                              {[0, 0.25, 0.5, 0.75, 1].map(pct => (
+                                <span key={pct}>{Math.round(detailBucketData.max * pct)}分钟</span>
+                              ))}
                             </div>
                           </div>
                         )}
@@ -3368,6 +3395,7 @@ export default function App() {
                               const maxVal = Math.max(...detailDurationSeries);
                               const minVal = Math.min(...detailDurationSeries);
                               const range = Math.max(1, maxVal - minVal);
+                              const midVal = (minVal + maxVal) / 2;
                               if (singleDurationChartType === 'bar') {
                                 const barWidth = 640 / detailDurationSeries.length;
                                 return (
@@ -3389,6 +3417,9 @@ export default function App() {
                                       );
                                     })}
                                     <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                    <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(minVal)}</text>
+                                    <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(midVal)}</text>
+                                    <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxVal)}</text>
                                   </>
                                 );
                               }
@@ -3408,6 +3439,9 @@ export default function App() {
                                     );
                                   })}
                                   <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(minVal)}</text>
+                                  <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(midVal)}</text>
+                                  <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxVal)}</text>
                                 </>
                               );
                             })()}
@@ -3435,6 +3469,9 @@ export default function App() {
                               const maxVal = Math.max(...logVals);
                               const minVal = Math.min(...logVals);
                               const range = Math.max(1e-6, maxVal - minVal);
+                              const rawMin = Math.min(...detailGapSeries);
+                              const rawMax = Math.max(...detailGapSeries);
+                              const rawMid = (rawMin + rawMax) / 2;
                               if (singleGapChartType === 'bar') {
                                 const barWidth = 640 / logVals.length;
                                 return (
@@ -3456,6 +3493,9 @@ export default function App() {
                                       );
                                     })}
                                     <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                    <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
+                                    <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
+                                    <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
                                   </>
                                 );
                               }
@@ -3475,6 +3515,9 @@ export default function App() {
                                     );
                                   })}
                                   <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
+                                  <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
+                                  <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
                                 </>
                               );
                             })()}
@@ -3496,8 +3539,9 @@ export default function App() {
                             {(() => {
                               const medianMinutes = detailDurationStats.median === null ? 0 : detailDurationStats.median / 60;
                               const maxY = Math.max(...detailStartDurationPoints.map(p => p.durationMin), medianMinutes, 1);
-                              const originX = 50 + (720 / 2 / 720) * 620; // 12:00 -> 中点
+                              const originX = 50 + (720 / 1440) * 620; // 12:00 -> 中点
                               const originY = 180 - (medianMinutes / maxY) * 140;
+                              const yMid = (medianMinutes + maxY) / 2;
                               return (
                                 <>
                                   <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
@@ -3520,10 +3564,13 @@ export default function App() {
                                     );
                                   })}
                                   <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>00:00</text>
+                                  <text x={50 + (360 / 1440) * 620 - 12} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>06:00</text>
                                   <text x={originX - 12} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>12:00</text>
+                                  <text x={50 + (1080 / 1440) * 620 - 12} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>18:00</text>
                                   <text x={650} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>24:00</text>
                                   <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0分钟</text>
                                   <text x={18} y={originY + 4} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>P50</text>
+                                  <text x={18} y={180 - (yMid / maxY) * 140} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(yMid)}分钟</text>
                                   <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxY)}分钟</text>
                                 </>
                               );
@@ -3531,47 +3578,7 @@ export default function App() {
                           </svg>
                         )}
                       </div>
-
-                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">开始时间-时长散点</div>
-                          <span data-tip="X: 开始时间；Y: 本次时长分钟。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
-                        </div>
-                        {detailStartDurationPoints.length < 2 ? (
-                          <div className="text-xs text-gray-400">数据不足</div>
-                        ) : (
-                          <svg viewBox="0 0 720 220" className="w-full h-52">
-                            {(() => {
-                              const maxY = Math.max(...detailStartDurationPoints.map(p => p.durationMin), 1);
-                              return (
-                                <>
-                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                  {detailStartDurationPoints.map((p, idx) => {
-                                    const x = 50 + (p.startMin / 1440) * 620;
-                                    const y = 180 - (p.durationMin / maxY) * 140;
-                                    return (
-                                      <circle
-                                        key={idx}
-                                        cx={x}
-                                        cy={y}
-                                        r={3}
-                                        fill={detailEvent.color}
-                                        opacity={0.75}
-                                        data-tip={`开始 ${formatHourMinute(p.start)} · 时长 ${formatDuration(p.durationMin * 60)}`}
-                                      />
-                                    );
-                                  })}
-                                  <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>00:00</text>
-                                  <text x={650} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>24:00</text>
-                                  <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0分钟</text>
-                                  <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxY)}分钟</text>
-                                </>
-                              );
-                            })()}
-                          </svg>
-                        )}
-                      </div>
+                      {/* 开始时间-时长散点（已由四象限散点替代） */}
 
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
@@ -3596,6 +3603,8 @@ export default function App() {
                               if (points.length === 0) return null;
                               const maxX = Math.max(...points.map(p => p.gapHours), 1);
                               const maxY = Math.max(...points.map(p => p.durationHours), 1);
+                              const midX = maxX / 2;
+                              const midY = maxY / 2;
                               return (
                                 <>
                                   <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
@@ -3608,8 +3617,10 @@ export default function App() {
                                     );
                                   })}
                                   <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0小时</text>
+                                  <text x={50 + (midX / maxX) * 620 - 8} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{midX.toFixed(1)}小时</text>
                                   <text x={660} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{maxX.toFixed(1)}小时</text>
                                   <text x={12} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0小时</text>
+                                  <text x={12} y={180 - (midY / maxY) * 140} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{midY.toFixed(1)}小时</text>
                                   <text x={12} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{maxY.toFixed(1)}小时</text>
                                 </>
                               );
