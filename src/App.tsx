@@ -2841,6 +2841,12 @@ export default function App() {
     return `${h}:${m}`;
   };
 
+  const minuteToLabel = (minute: number) => {
+    const h = Math.floor(minute / 60);
+    const m = minute % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
   const exportData = () => {
     const data = { settings, eventTypes, sessions };
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -3289,6 +3295,7 @@ export default function App() {
               const detailHeatmapCount = getHeatmapDataForSessions(detailSessions, 'count');
               const detailHeatmapDuration = getHeatmapDataForSessions(detailSessions, 'duration');
               const detailSpectrumBase = getSpectrumRangeFromSessions(detailSessions, spectrumRange);
+              const detailPolarSessions = getSpectrumRangeFromSessions(detailSessions, spectrumRange);
               const detailSpectrumCompare = spectrumRange === 'all' ? [] : getSpectrumRangeFromSessions(detailSessions, spectrumRange, Number(spectrumRange));
               const detailSpectrumShowCompare = spectrumRange !== 'all' && detailSpectrumCompare.length > 0;
 
@@ -3352,6 +3359,124 @@ export default function App() {
                     </div>
 
                     <div className="space-y-6">
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            极坐标系
+                            <span data-tip="角度=开始时间（24h），半径=持续时间；支持范围切换。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                            <button onClick={() => setSpectrumRange('7')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === '7' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>7天</button>
+                            <button onClick={() => setSpectrumRange('30')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === '30' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>30天</button>
+                            <button onClick={() => setSpectrumRange('all')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === 'all' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>全部</button>
+                          </div>
+                        </div>
+                        {detailPolarSessions.filter(s => s.endTime).length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-white/60 dark:bg-black/10 rounded-2xl p-2">
+                              <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">极坐标散点 + 包络线</div>
+                              <svg viewBox="0 0 320 320" className="w-full h-72">
+                                {(() => {
+                                  const points = detailPolarSessions
+                                    .filter(s => s.endTime)
+                                    .map(s => {
+                                      const start = new Date(s.startTime);
+                                      const end = new Date(s.endTime!);
+                                      const durationMin = Math.max(0, (end.getTime() - start.getTime()) / 60000);
+                                      const startMinutes = start.getHours() * 60 + start.getMinutes();
+                                      const angle = (startMinutes / 1440) * Math.PI * 2 - Math.PI / 2;
+                                      return { durationMin, angle, startMinutes };
+                                    });
+                                  const maxDur = Math.max(...points.map(p => p.durationMin), 1);
+                                  const rScale = (val: number) => 20 + (val / maxDur) * 120;
+                                  const center = 160;
+                                  const bins = Array.from({ length: 96 }, () => 0);
+                                  points.forEach(p => {
+                                    const bin = Math.min(95, Math.floor((p.startMinutes / 1440) * 96));
+                                    bins[bin] = Math.max(bins[bin], p.durationMin);
+                                  });
+                                  const envelope = bins.map((v, i) => {
+                                    const angle = (i / 96) * Math.PI * 2 - Math.PI / 2;
+                                    const r = rScale(v);
+                                    return { x: center + Math.cos(angle) * r, y: center + Math.sin(angle) * r };
+                                  });
+                                  const path = envelope.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+                                  return (
+                                    <>
+                                      {[30, 60, 90, 120].map((r, i) => (
+                                        <circle key={i} cx={center} cy={center} r={r} fill="none" stroke={settings.darkMode ? '#374151' : '#e5e7eb'} strokeWidth="1" />
+                                      ))}
+                                      <path d={path} fill="none" stroke={detailEvent.color} strokeWidth="2" opacity={0.7} />
+                                      {points.map((p, i) => {
+                                        const r = rScale(p.durationMin);
+                                        const x = center + Math.cos(p.angle) * r;
+                                        const y = center + Math.sin(p.angle) * r;
+                                        const hourDecimal = (p.startMinutes / 60).toFixed(2);
+                                        return (
+                                          <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`开始 ${hourDecimal}h · 时长 ${Math.round(p.durationMin)} 分钟`} />
+                                        );
+                                      })}
+                                    </>
+                                  );
+                                })()}
+                              </svg>
+                            </div>
+                            <div className="bg-white/60 dark:bg-black/10 rounded-2xl p-2">
+                              <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">极坐标弧线（起止时间）</div>
+                              <svg viewBox="0 0 320 320" className="w-full h-72">
+                                {(() => {
+                                  const items = detailPolarSessions
+                                    .filter(s => s.endTime)
+                                    .map(s => {
+                                      const start = new Date(s.startTime);
+                                      const end = new Date(s.endTime!);
+                                      const durationMin = Math.max(0, (end.getTime() - start.getTime()) / 60000);
+                                      const startMinutes = start.getHours() * 60 + start.getMinutes();
+                                      const endMinutes = end.getHours() * 60 + end.getMinutes();
+                                      return { startMinutes, endMinutes, durationMin };
+                                    });
+                                  const maxDur = Math.max(...items.map(p => p.durationMin), 1);
+                                  const rScale = (val: number) => 20 + (val / maxDur) * 120;
+                                  const center = 160;
+                                  return (
+                                    <>
+                                      {[30, 60, 90, 120].map((r, i) => (
+                                        <circle key={i} cx={center} cy={center} r={r} fill="none" stroke={settings.darkMode ? '#374151' : '#e5e7eb'} strokeWidth="1" />
+                                      ))}
+                                      {items.map((p, i) => {
+                                        const r = rScale(p.durationMin);
+                                        const startAngle = (p.startMinutes / 1440) * Math.PI * 2 - Math.PI / 2;
+                                        const endAngle = (p.endMinutes / 1440) * Math.PI * 2 - Math.PI / 2;
+                                        const drawArc = (sa: number, ea: number, key: string) => {
+                                          const largeArc = ea - sa > Math.PI ? 1 : 0;
+                                          const x1 = center + Math.cos(sa) * r;
+                                          const y1 = center + Math.sin(sa) * r;
+                                          const x2 = center + Math.cos(ea) * r;
+                                          const y2 = center + Math.sin(ea) * r;
+                                          const d = `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`;
+                                          return <path key={key} d={d} fill="none" stroke={detailEvent.color} strokeWidth={4} opacity={0.7} data-tip={`起 ${minuteToLabel(p.startMinutes)} · 止 ${minuteToLabel(p.endMinutes)} · ${Math.round(p.durationMin)} 分钟`} />;
+                                        };
+                                        if (p.endMinutes >= p.startMinutes) {
+                                          return drawArc(startAngle, endAngle, `a-${i}`);
+                                        }
+                                        const endOfDay = Math.PI * 2 - Math.PI / 2;
+                                        return (
+                                          <g key={`a-${i}`}>
+                                            {drawArc(startAngle, endOfDay, `a1-${i}`)}
+                                            {drawArc(-Math.PI / 2, endAngle, `a2-${i}`)}
+                                          </g>
+                                        );
+                                      })}
+                                    </>
+                                  );
+                                })()}
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">时长分布（动态分箱）</div>
