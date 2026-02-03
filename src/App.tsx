@@ -157,7 +157,7 @@ const dateToInputString = (dateInput: string | Date | null) => {
   if (!dateInput) return '';
   const date = new Date(dateInput);
   const offset = date.getTimezoneOffset() * 60000;
-  return (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
+  return (new Date(date.getTime() - offset)).toISOString().slice(0, 19);
 };
 
 // --- Icons (Inline SVG) ---
@@ -748,6 +748,12 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
     const h = Math.floor(minute / 60);
     const m = minute % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
+  const getThermalColor = (t: number) => {
+    const clamped = Math.max(0, Math.min(1, t));
+    const hue = 220 - clamped * 220;
+    return `hsl(${hue}, 90%, 50%)`;
   };
 
   const handlePointer = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>, dataset: typeof baseDataRef, container: HTMLDivElement | null) => {
@@ -1551,11 +1557,11 @@ const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMod
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">开始时间</label>
-              <input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} className="w-full p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 text-gray-900 dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400" />
+              <input type="datetime-local" step="1" value={start} onChange={(e) => setStart(e.target.value)} className="w-full p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 text-gray-900 dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">结束时间</label>
-              <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} className="w-full p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 text-gray-900 dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400" />
+              <input type="datetime-local" step="1" value={end} onChange={(e) => setEnd(e.target.value)} className="w-full p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 text-gray-900 dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400" />
             </div>
           </div>
           <div>
@@ -1749,6 +1755,7 @@ export default function App() {
   const [burstPeriod, setBurstPeriod] = useState<'week' | 'month'>('week');
   const [acfLagMode, setAcfLagMode] = useState<'count' | 'day'>('count');
   const [acfMetric, setAcfMetric] = useState<'duration' | 'gap'>('duration');
+  const [cumulativeRange, setCumulativeRange] = useState<'all' | 'week' | 'month'>('all');
   const [singleDurationChartType, setSingleDurationChartType] = useState<'line' | 'bar'>('line');
   const [singleGapChartType, setSingleGapChartType] = useState<'line' | 'bar'>('line');
   const [detailEventId, setDetailEventId] = useState<string | null>(null);
@@ -3419,6 +3426,30 @@ export default function App() {
               const detailPolarSessions = getSpectrumRangeFromSessions(detailSessions, spectrumRange);
               const detailSpectrumCompare = spectrumRange === 'all' ? [] : getSpectrumRangeFromSessions(detailSessions, spectrumRange, Number(spectrumRange));
               const detailSpectrumShowCompare = spectrumRange !== 'all' && detailSpectrumCompare.length > 0;
+              const detailCumulativeRange = (() => {
+                if (cumulativeRange === 'all') return { current: detailSessions, previous: [] as Session[] };
+                const now = new Date();
+                let start = new Date(now);
+                if (cumulativeRange === 'week') {
+                  const diff = (start.getDay() - settings.weekStart + 7) % 7;
+                  start.setDate(start.getDate() - diff);
+                  start.setHours(0, 0, 0, 0);
+                  const prevStart = new Date(start);
+                  prevStart.setDate(prevStart.getDate() - 7);
+                  const prevEnd = new Date(start);
+                  return {
+                    current: detailSessions.filter(s => s.endTime && new Date(s.endTime) >= start && new Date(s.endTime) < now),
+                    previous: detailSessions.filter(s => s.endTime && new Date(s.endTime) >= prevStart && new Date(s.endTime) < prevEnd)
+                  };
+                }
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                const prevStart = new Date(start.getFullYear(), start.getMonth() - 1, 1);
+                const prevEnd = new Date(start);
+                return {
+                  current: detailSessions.filter(s => s.endTime && new Date(s.endTime) >= start && new Date(s.endTime) < now),
+                  previous: detailSessions.filter(s => s.endTime && new Date(s.endTime) >= prevStart && new Date(s.endTime) < prevEnd)
+                };
+              })();
               const detailRidgeSlices = buildTimeSlices(ridgePeriod, ridgePeriod === 'week' ? 52 : 12);
               const detailRidgeSeries = detailRidgeSlices.map(slice => {
                 const sliceSessions = detailSessions.filter(s => s.endTime && new Date(s.endTime) >= slice.start && new Date(s.endTime) < slice.end);
@@ -3427,7 +3458,8 @@ export default function App() {
                 for (let i = 0; i < 1440; i++) max = Math.max(max, counts[i]);
                 return { counts, max, label: slice.label };
               });
-              const detailRidgeMax = Math.max(1, ...detailRidgeSeries.map(s => s.max));
+              const detailRidgeFiltered = detailRidgeSeries.filter(s => s.max > 0);
+              const detailRidgeMax = Math.max(1, ...detailRidgeFiltered.map(s => s.max));
               const detailBurstSlices = buildTimeSlices(burstPeriod, burstPeriod === 'week' ? 52 : 12);
               const detailBurstSeries = detailBurstSlices.map(slice => {
                 const sliceSessions = detailSessions
@@ -3440,13 +3472,13 @@ export default function App() {
                   const gap = (currStart - prevStart) / 1000;
                   if (gap >= 0) gaps.push(gap);
                 }
-                if (gaps.length === 0) return { label: slice.label, B: 0 };
+                if (gaps.length === 0) return null;
                 const mu = gaps.reduce((a, b) => a + b, 0) / gaps.length;
                 const variance = gaps.reduce((a, b) => a + Math.pow(b - mu, 2), 0) / gaps.length;
                 const sigma = Math.sqrt(variance);
                 const B = (sigma - mu) / (sigma + mu);
                 return { label: slice.label, B: Math.max(-1, Math.min(1, B)) };
-              });
+              }).filter(Boolean) as { label: string; B: number }[];
               const detailDailySeries = buildDailyTotals(detailSessions);
               const detailDailyValues = detailDailySeries.map(d => d.value);
               const detailTrend = movingAverage(detailDailyValues, 7);
@@ -3552,13 +3584,15 @@ export default function App() {
                                   const maxDur = Math.max(...points.map(p => p.durationMin), 1);
                                   const rScale = (val: number) => 20 + (val / maxDur) * 120;
                                   const center = 160;
-                                  const bins = Array.from({ length: 96 }, () => 0);
+                                  const binSize = 30;
+                                  const binCount = Math.ceil(1440 / binSize);
+                                  const bins = Array.from({ length: binCount }, () => 0);
                                   points.forEach(p => {
-                                    const bin = Math.min(95, Math.floor((p.startMinutes / 1440) * 96));
+                                    const bin = Math.min(binCount - 1, Math.floor(p.startMinutes / binSize));
                                     bins[bin] = Math.max(bins[bin], p.durationMin);
                                   });
                                   const envelope = bins.map((v, i) => {
-                                    const angle = (i / 96) * Math.PI * 2 - Math.PI / 2;
+                                    const angle = (i / binCount) * Math.PI * 2 - Math.PI / 2;
                                     const r = rScale(v);
                                     return { x: center + Math.cos(angle) * r, y: center + Math.sin(angle) * r };
                                   });
@@ -3819,8 +3853,9 @@ export default function App() {
                         ) : (
                           <svg viewBox="0 0 720 180" className="w-full h-44">
                             {(() => {
-                              const logVals = detailGapSeries.map(v => Math.log10(v + 1));
-                              const logValsStart = detailStartGapSeries.map(v => Math.log10(v + 1));
+                              const logBase = 6;
+                              const logVals = detailGapSeries.map(v => Math.log(v + 1) / Math.log(logBase));
+                              const logValsStart = detailStartGapSeries.map(v => Math.log(v + 1) / Math.log(logBase));
                               const allLogs = [...logVals, ...logValsStart];
                               const maxVal = Math.max(...allLogs);
                               const minVal = Math.min(...allLogs);
@@ -3830,7 +3865,7 @@ export default function App() {
                               const rawMid = (rawMin + rawMax) / 2;
                               const anchorSeconds = [3600, 43200, 86400];
                               const anchorLines = anchorSeconds.map(sec => {
-                                const v = Math.log10(sec + 1);
+                                const v = Math.log(sec + 1) / Math.log(logBase);
                                 const y = 150 - ((v - minVal) / range) * 120;
                                 return { sec, y };
                               });
@@ -4140,25 +4175,36 @@ export default function App() {
                       </div>
 
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">累计投入曲线</div>
-                          <span data-tip="X: 累计次数百分比；Y: 累计时长百分比。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        <div className="flex flex-wrap items-center justify-between mb-2 gap-3">
+                          <div className="flex items-center gap-2">
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">累计投入曲线</div>
+                            <span data-tip="X: 累计次数百分比；Y: 累计时长百分比。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
+                            <button onClick={() => setCumulativeRange('week')} className={`px-2 py-0.5 rounded-md transition-all ${cumulativeRange === 'week' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>本周</button>
+                            <button onClick={() => setCumulativeRange('month')} className={`px-2 py-0.5 rounded-md transition-all ${cumulativeRange === 'month' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>本月</button>
+                            <button onClick={() => setCumulativeRange('all')} className={`px-2 py-0.5 rounded-md transition-all ${cumulativeRange === 'all' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>全部</button>
+                          </div>
                         </div>
-                        {detailDurationSeries.length < 2 ? (
+                        {detailCumulativeRange.current.filter(s => s.endTime).length < 2 ? (
                           <div className="text-xs text-gray-400">数据不足</div>
                         ) : (
                           <svg viewBox="0 0 720 220" className="w-full h-52">
                             {(() => {
-                              const durations = detailDurationSeries.slice().sort((a, b) => a - b);
-                              const total = durations.reduce((a, b) => a + b, 0);
-                              let cumulative = 0;
-                              const points = durations.map((d, i) => {
-                                cumulative += d;
-                                const x = (i + 1) / durations.length;
-                                const y = total === 0 ? 0 : cumulative / total;
-                                return { x, y };
-                              });
-                              const path = points.map((p, i) => {
+                              const buildCurve = (sessions: Session[]) => {
+                                const durations = sessions.filter(s => s.endTime).map(s => (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 1000).filter(v => v >= 0).sort((a, b) => a - b);
+                                const total = durations.reduce((a, b) => a + b, 0);
+                                let cumulative = 0;
+                                return durations.map((d, i) => {
+                                  cumulative += d;
+                                  const x = (i + 1) / durations.length;
+                                  const y = total === 0 ? 0 : cumulative / total;
+                                  return { x, y };
+                                });
+                              };
+                              const currentPoints = buildCurve(detailCumulativeRange.current);
+                              const prevPoints = cumulativeRange === 'all' ? [] : buildCurve(detailCumulativeRange.previous);
+                              const toPath = (pts: { x: number; y: number }[]) => pts.map((p, i) => {
                                 const x = 50 + p.x * 620;
                                 const y = 180 - p.y * 140;
                                 return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
@@ -4167,8 +4213,11 @@ export default function App() {
                                 <>
                                   <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
                                   <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                  <path d={path} fill="none" stroke={detailEvent.color} strokeWidth={2} />
-                                  {points.map((p, i) => {
+                                  {prevPoints.length > 1 && (
+                                    <path d={toPath(prevPoints)} fill="none" stroke={settings.darkMode ? '#9ca3af' : '#6b7280'} strokeWidth={2} opacity={0.8} />
+                                  )}
+                                  <path d={toPath(currentPoints)} fill="none" stroke={detailEvent.color} strokeWidth={2} />
+                                  {currentPoints.map((p, i) => {
                                     const x = 50 + p.x * 620;
                                     const y = 180 - p.y * 140;
                                     return (
@@ -4180,6 +4229,10 @@ export default function App() {
                                   <text x={670} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>100%</text>
                                   <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0%</text>
                                   <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>100%</text>
+                                  {prevPoints.length > 1 && (
+                                    <text x={520} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>上期</text>
+                                  )}
+                                  <text x={560} y={18} fontSize="10" fill={detailEvent.color}>本期</text>
                                 </>
                               );
                             })()}
@@ -4321,20 +4374,32 @@ export default function App() {
                           </div>
                         </div>
                         <div className="max-h-[520px] overflow-y-auto m3-scrollbar">
-                          <svg viewBox={`0 0 720 ${detailRidgeSeries.length * 16 + 20}`} className="w-full h-auto">
-                            {detailRidgeSeries.map((slice, idx) => {
-                              const baseY = 20 + idx * 16 + 12;
-                              const amp = 10;
-                              const points = Array.from(slice.counts).map((v, i) => {
-                                const x = 40 + (i / 1439) * 640;
-                                const y = baseY - (v / detailRidgeMax) * amp;
-                                return `${x},${y}`;
-                              }).join(' ');
+                          <svg viewBox={`0 0 720 ${detailRidgeFiltered.length * 12 + 20}`} className="w-full h-auto">
+                            {detailRidgeFiltered.map((slice, idx) => {
+                              const baseY = 20 + idx * 12;
                               return (
                                 <g key={slice.label}>
-                                  <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="1.5" opacity={0.65} />
+                                  {Array.from(slice.counts).map((v, i) => {
+                                    if (v === 0) return null;
+                                    const t = v / detailRidgeMax;
+                                    const color = spectrumPalette === 'thermal'
+                                      ? getThermalColor(t)
+                                      : `rgba(${themeRgb}, ${0.2 + t * 0.8})`;
+                                    const x = 40 + (i / 1440) * 640;
+                                    return (
+                                      <rect
+                                        key={i}
+                                        x={x}
+                                        y={baseY}
+                                        width={640 / 1440}
+                                        height={10}
+                                        fill={color}
+                                        opacity={1}
+                                      />
+                                    );
+                                  })}
                                   {idx % 6 === 0 && (
-                                    <text x={4} y={baseY} fontSize="9" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{slice.label}</text>
+                                    <text x={4} y={baseY + 8} fontSize="9" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{slice.label}</text>
                                   )}
                                 </g>
                               );
