@@ -633,8 +633,17 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(1, Math.floor(rect.width));
+    const height = Math.max(1, Math.floor(rect.height));
+    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    (ctx as any).imageSmoothingQuality = 'high';
     ctx.clearRect(0, 0, width, height);
 
     const minuteCounts = buildMinuteCounts(data);
@@ -676,8 +685,17 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.max(1, Math.floor(rect.width));
+    const height = Math.max(1, Math.floor(rect.height));
+    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    (ctx as any).imageSmoothingQuality = 'high';
     ctx.clearRect(0, 0, width, height);
 
     const grid = buildHeatGrid(data);
@@ -717,6 +735,21 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
     else compareDataRef.current = render1D(compareSessions, compareRef.current) || null;
   }, [compareSessions, color, mode, palette, showComparison]);
 
+  const findRange = (arr: Int32Array, idx: number) => {
+    const value = arr[idx] || 0;
+    let start = idx;
+    let end = idx;
+    while (start - 1 >= 0 && arr[start - 1] === value) start--;
+    while (end + 1 < arr.length && arr[end + 1] === value) end++;
+    return { start, end, value };
+  };
+
+  const minuteToLabel = (minute: number) => {
+    const h = Math.floor(minute / 60);
+    const m = minute % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
   const handlePointer = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>, dataset: typeof baseDataRef, container: HTMLDivElement | null) => {
     if (!container || !dataset.current) return;
     const rect = container.getBoundingClientRect();
@@ -727,27 +760,33 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
     const y = clientY - rect.top;
     if (dataset.current.type === '1d' && dataset.current.minuteCounts) {
       const idx = Math.min(1439, Math.max(0, Math.floor((x / rect.width) * 1440)));
-      const hour = Math.floor(idx / 60);
-      const minute = idx % 60;
-      const count = dataset.current.minuteCounts[idx] || 0;
+      const segment = findRange(dataset.current.minuteCounts, idx);
+      const count = segment.value;
+      const startLabel = minuteToLabel(segment.start);
+      const endLabel = minuteToLabel(segment.end + 1);
+      const duration = segment.end - segment.start + 1;
       setTooltip({
         x: x + 8,
         y: y + 8,
-        text: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} 覆盖 ${count} 次`
+        text: `${startLabel} - ${endLabel} · ${count} 次 · ${duration} 分钟`
       });
       return;
     }
     if (dataset.current.type === '2d' && dataset.current.grid) {
       const col = Math.min(1439, Math.max(0, Math.floor((x / rect.width) * 1440)));
       const row = Math.min(6, Math.max(0, Math.floor((y / rect.height) * 7)));
-      const count = dataset.current.grid[row]?.[col] || 0;
+      const rowData = dataset.current.grid[row];
+      if (!rowData) return;
+      const segment = findRange(rowData, col);
+      const count = segment.value;
+      const startLabel = minuteToLabel(segment.start);
+      const endLabel = minuteToLabel(segment.end + 1);
+      const duration = segment.end - segment.start + 1;
       const dayLabel = row === 0 ? 7 : row; // 1-7 display
-      const hour = Math.floor(col / 60);
-      const minute = col % 60;
       setTooltip({
         x: x + 8,
         y: y + 8,
-        text: `星期${dayLabel} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} 覆盖 ${count} 次`
+        text: `星期${dayLabel} ${startLabel} - ${endLabel} · ${count} 次 · ${duration} 分钟`
       });
     }
   };
@@ -768,6 +807,7 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
               className="relative w-full bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden"
               onMouseMove={(e) => handlePointer(e, baseDataRef, e.currentTarget)}
               onMouseLeave={clearTooltip}
+              onClick={(e) => handlePointer(e, baseDataRef, e.currentTarget)}
               onTouchMove={(e) => handlePointer(e, baseDataRef, e.currentTarget)}
               onTouchEnd={clearTooltip}
             >
@@ -784,6 +824,7 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
               className="relative h-16 w-full bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden"
               onMouseMove={(e) => handlePointer(e, baseDataRef, e.currentTarget)}
               onMouseLeave={clearTooltip}
+              onClick={(e) => handlePointer(e, baseDataRef, e.currentTarget)}
               onTouchMove={(e) => handlePointer(e, baseDataRef, e.currentTarget)}
               onTouchEnd={clearTooltip}
             >
@@ -803,6 +844,7 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
                 className="relative w-full bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden"
                 onMouseMove={(e) => handlePointer(e, compareDataRef, e.currentTarget)}
                 onMouseLeave={clearTooltip}
+                onClick={(e) => handlePointer(e, compareDataRef, e.currentTarget)}
                 onTouchMove={(e) => handlePointer(e, compareDataRef, e.currentTarget)}
                 onTouchEnd={clearTooltip}
               >
@@ -819,6 +861,7 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
                 className="relative h-16 w-full bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden"
                 onMouseMove={(e) => handlePointer(e, compareDataRef, e.currentTarget)}
                 onMouseLeave={clearTooltip}
+                onClick={(e) => handlePointer(e, compareDataRef, e.currentTarget)}
                 onTouchMove={(e) => handlePointer(e, compareDataRef, e.currentTarget)}
                 onTouchEnd={clearTooltip}
               >
@@ -2625,6 +2668,20 @@ export default function App() {
     return gaps;
   };
 
+  const buildStartGapSeries = (relevantSessions: Session[]) => {
+    const completed = relevantSessions
+      .filter(s => s.endTime && !s.incomplete)
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+    const gaps: number[] = [];
+    for (let i = 1; i < completed.length; i++) {
+      const prevStart = new Date(completed[i - 1].startTime).getTime();
+      const currStart = new Date(completed[i].startTime).getTime();
+      const gap = (currStart - prevStart) / 1000;
+      if (gap >= 0) gaps.push(gap);
+    }
+    return gaps;
+  };
+
   const getGoalStatus = (event: EventType) => {
     if (!event.goal) return null;
     const { metric, period, targetValue } = event.goal;
@@ -3107,9 +3164,6 @@ export default function App() {
                     const stats = calculateStats(filteredSessions.filter(s => s.eventId === et.id));
                     const extras = getCompletionExtras(filteredSessions.filter(s => s.eventId === et.id));
                     const durationStats = getDurationStats(filteredSessions.filter(s => s.eventId === et.id));
-                    const histogram = buildHistogram(filteredSessions.filter(s => s.eventId === et.id));
-                    const durationSeries = buildDurationSeries(filteredSessions.filter(s => s.eventId === et.id));
-                    const gapSeries = buildGapSeries(filteredSessions.filter(s => s.eventId === et.id));
                     return (
                       <button
                         key={et.id}
@@ -3181,189 +3235,8 @@ export default function App() {
                           </div>
                         </div>
 
-                        <div className="mt-6 space-y-4">
-                          <div>
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-2">时长分布（动态分箱）</div>
-                            {histogram.bins.length === 0 ? (
-                              <div className="text-xs text-gray-400">暂无完成记录</div>
-                            ) : (
-                              <div className="w-full">
-                                <svg viewBox="0 0 320 90" className="w-full h-20">
-                                  {histogram.bins.map((b, i) => {
-                                    const barWidth = 280 / histogram.bins.length;
-                                    const h = histogram.maxCount === 0 ? 0 : (b.count / histogram.maxCount) * 60;
-                                    const x = 20 + i * barWidth;
-                                    const y = 70 - h;
-                                    return (
-                                      <rect
-                                        key={i}
-                                        x={x}
-                                        y={y}
-                                        width={Math.max(2, barWidth - 4)}
-                                        height={h}
-                                        rx={2}
-                                        fill={et.color}
-                                        opacity={0.8}
-                                        data-tip={`${formatDuration(b.start)} - ${formatDuration(b.end)} · ${b.count} 次`}
-                                      />
-                                    );
-                                  })}
-                                  <line x1={20} y1={70} x2={300} y2={70} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                  <text x={6} y={70} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0</text>
-                                  <text x={6} y={40} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(histogram.maxCount / 2)}</text>
-                                  <text x={6} y={12} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{histogram.maxCount}</text>
-                                </svg>
-                                <div className="flex justify-between text-[10px] text-gray-400">
-                                  {[0, 0.5, 1].map(pct => (
-                                    <span key={pct}>{formatDuration(histogram.min + (histogram.max - histogram.min) * pct)}</span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">单次时长</div>
-                              <div className="bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
-                                <button onClick={() => setSingleDurationChartType('line')} className={`px-2 py-0.5 rounded-md transition-all ${singleDurationChartType === 'line' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>折线</button>
-                                <button onClick={() => setSingleDurationChartType('bar')} className={`px-2 py-0.5 rounded-md transition-all ${singleDurationChartType === 'bar' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>柱状</button>
-                              </div>
-                            </div>
-                            {durationSeries.length < 2 ? (
-                              <div className="text-xs text-gray-400">数据不足</div>
-                            ) : (
-                              <svg viewBox="0 0 320 80" className="w-full h-16">
-                                {(() => {
-                                  const maxVal = Math.max(...durationSeries);
-                                  const minVal = Math.min(...durationSeries);
-                                  const range = Math.max(1, maxVal - minVal);
-                                  const midVal = (minVal + maxVal) / 2;
-                                  if (singleDurationChartType === 'bar') {
-                                    const barWidth = 280 / durationSeries.length;
-                                    return (
-                                      <>
-                                        {durationSeries.map((v, i) => {
-                                          const h = ((v - minVal) / range) * 40;
-                                          return (
-                                            <rect
-                                              key={i}
-                                              x={20 + i * barWidth}
-                                              y={60 - h}
-                                              width={Math.max(2, barWidth - 2)}
-                                              height={h}
-                                              rx={2}
-                                              fill={et.color}
-                                              opacity={0.8}
-                                              data-tip={`第${i + 1}次 · ${formatDuration(v)}`}
-                                            />
-                                          );
-                                        })}
-                                        <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                        <text x={4} y={60} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(minVal)}</text>
-                                        <text x={4} y={40} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(midVal)}</text>
-                                        <text x={4} y={20} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxVal)}</text>
-                                      </>
-                                    );
-                                  }
-                                  const points = durationSeries.map((v, i) => {
-                                    const x = 20 + (i / (durationSeries.length - 1)) * 280;
-                                    const y = 60 - ((v - minVal) / range) * 40;
-                                    return `${x},${y}`;
-                                  }).join(' ');
-                                  return (
-                                    <>
-                                      <polyline points={points} fill="none" stroke={et.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                      {durationSeries.map((v, i) => {
-                                        const x = 20 + (i / (durationSeries.length - 1)) * 280;
-                                        const y = 60 - ((v - minVal) / range) * 40;
-                                        return (
-                                          <circle key={i} cx={x} cy={y} r={3} fill={et.color} opacity={0.8} data-tip={`第${i + 1}次 · ${formatDuration(v)}`} />
-                                        );
-                                      })}
-                                      <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                      <text x={4} y={60} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(minVal)}</text>
-                                      <text x={4} y={40} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(midVal)}</text>
-                                      <text x={4} y={20} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxVal)}</text>
-                                    </>
-                                  );
-                                })()}
-                              </svg>
-                            )}
-                          </div>
-
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">间隔（对数）</div>
-                              <div className="bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
-                                <button onClick={() => setSingleGapChartType('line')} className={`px-2 py-0.5 rounded-md transition-all ${singleGapChartType === 'line' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>折线</button>
-                                <button onClick={() => setSingleGapChartType('bar')} className={`px-2 py-0.5 rounded-md transition-all ${singleGapChartType === 'bar' ? 'bg-white dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>柱状</button>
-                              </div>
-                            </div>
-                            {gapSeries.length < 2 ? (
-                              <div className="text-xs text-gray-400">数据不足</div>
-                            ) : (
-                              <svg viewBox="0 0 320 80" className="w-full h-16">
-                                {(() => {
-                                  const logVals = gapSeries.map(v => Math.log10(v + 1));
-                                  const maxVal = Math.max(...logVals);
-                                  const minVal = Math.min(...logVals);
-                                  const range = Math.max(1e-6, maxVal - minVal);
-                                  const rawMin = Math.min(...gapSeries);
-                                  const rawMax = Math.max(...gapSeries);
-                                  const rawMid = (rawMin + rawMax) / 2;
-                                  if (singleGapChartType === 'bar') {
-                                    const barWidth = 280 / logVals.length;
-                                    return (
-                                      <>
-                                        {logVals.map((v, i) => {
-                                          const h = ((v - minVal) / range) * 40;
-                                          return (
-                                            <rect
-                                              key={i}
-                                              x={20 + i * barWidth}
-                                              y={60 - h}
-                                              width={Math.max(2, barWidth - 2)}
-                                              height={h}
-                                              rx={2}
-                                              fill={et.color}
-                                              opacity={0.8}
-                                              data-tip={`间隔${i + 1} · ${formatDuration(gapSeries[i] || 0)}`}
-                                            />
-                                          );
-                                        })}
-                                        <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                        <text x={4} y={60} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
-                                        <text x={4} y={40} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
-                                        <text x={4} y={20} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
-                                      </>
-                                    );
-                                  }
-                                  const points = logVals.map((v, i) => {
-                                    const x = 20 + (i / (logVals.length - 1)) * 280;
-                                    const y = 60 - ((v - minVal) / range) * 40;
-                                    return `${x},${y}`;
-                                  }).join(' ');
-                                  return (
-                                    <>
-                                      <polyline points={points} fill="none" stroke={et.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                      {logVals.map((v, i) => {
-                                        const x = 20 + (i / (logVals.length - 1)) * 280;
-                                        const y = 60 - ((v - minVal) / range) * 40;
-                                        return (
-                                          <circle key={i} cx={x} cy={y} r={3} fill={et.color} opacity={0.8} data-tip={`间隔${i + 1} · ${formatDuration(gapSeries[i] || 0)}`} />
-                                        );
-                                      })}
-                                      <line x1={20} y1={60} x2={300} y2={60} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                      <text x={4} y={60} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
-                                      <text x={4} y={40} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
-                                      <text x={4} y={20} fontSize="8" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
-                                    </>
-                                  );
-                                })()}
-                              </svg>
-                            )}
-                          </div>
+                        <div className="mt-6 bg-gray-50/80 dark:bg-[#2c3038]/60 rounded-2xl p-4 text-sm text-gray-500 dark:text-gray-300 border border-dashed border-gray-200 dark:border-gray-700">
+                          图表预览已隐藏，点击卡片查看完整分析图表。
                         </div>
                       </button>
                     );
@@ -3383,6 +3256,7 @@ export default function App() {
               const detailHistogram = buildHistogram(detailSessions);
               const detailDurationSeries = buildDurationSeries(detailSessions);
               const detailGapSeries = buildGapSeries(detailSessions);
+              const detailStartGapSeries = buildStartGapSeries(detailSessions);
               const detailCompleted = detailSessions.filter(s => s.endTime && !s.incomplete);
               const detailBucketData = (() => {
                 if (detailCompleted.length === 0) return { bins: [], maxCount: 0, max: 0 };
@@ -3661,16 +3535,27 @@ export default function App() {
                           <svg viewBox="0 0 720 180" className="w-full h-44">
                             {(() => {
                               const logVals = detailGapSeries.map(v => Math.log10(v + 1));
-                              const maxVal = Math.max(...logVals);
-                              const minVal = Math.min(...logVals);
+                              const logValsStart = detailStartGapSeries.map(v => Math.log10(v + 1));
+                              const allLogs = [...logVals, ...logValsStart];
+                              const maxVal = Math.max(...allLogs);
+                              const minVal = Math.min(...allLogs);
                               const range = Math.max(1e-6, maxVal - minVal);
                               const rawMin = Math.min(...detailGapSeries);
                               const rawMax = Math.max(...detailGapSeries);
                               const rawMid = (rawMin + rawMax) / 2;
+                              const anchorSeconds = [3600, 43200, 86400];
+                              const anchorLines = anchorSeconds.map(sec => {
+                                const v = Math.log10(sec + 1);
+                                const y = 150 - ((v - minVal) / range) * 120;
+                                return { sec, y };
+                              });
                               if (singleGapChartType === 'bar') {
                                 const barWidth = 640 / logVals.length;
                                 return (
                                   <>
+                                    {anchorLines.map((a) => (
+                                      <line key={a.sec} x1={40} y1={a.y} x2={680} y2={a.y} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="3" />
+                                    ))}
                                     {logVals.map((v, i) => {
                                       const h = ((v - minVal) / range) * 120;
                                       return (
@@ -3699,9 +3584,20 @@ export default function App() {
                                 const y = 150 - ((v - minVal) / range) * 120;
                                 return `${x},${y}`;
                               }).join(' ');
+                              const pointsStart = logValsStart.map((v, i) => {
+                                const x = 40 + (i / (logValsStart.length - 1 || 1)) * 640;
+                                const y = 150 - ((v - minVal) / range) * 120;
+                                return `${x},${y}`;
+                              }).join(' ');
                               return (
                                 <>
+                                  {anchorLines.map((a) => (
+                                    <line key={a.sec} x1={40} y1={a.y} x2={680} y2={a.y} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="3" />
+                                  ))}
                                   <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  {pointsStart && (
+                                    <polyline points={pointsStart} fill="none" stroke={settings.darkMode ? '#9ca3af' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  )}
                                   {logVals.map((v, i) => {
                                     const x = 40 + (i / (logVals.length - 1)) * 640;
                                     const y = 150 - ((v - minVal) / range) * 120;
@@ -3709,10 +3605,19 @@ export default function App() {
                                       <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`间隔${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`} />
                                     );
                                   })}
+                                  {logValsStart.map((v, i) => {
+                                    const x = 40 + (i / (logValsStart.length - 1 || 1)) * 640;
+                                    const y = 150 - ((v - minVal) / range) * 120;
+                                    return (
+                                      <circle key={`s-${i}`} cx={x} cy={y} r={3} fill={settings.darkMode ? '#9ca3af' : '#6b7280'} opacity={0.8} data-tip={`间隔（开始-开始）${i + 1} · ${formatDuration(detailStartGapSeries[i] || 0)}`} />
+                                    );
+                                  })}
                                   <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
                                   <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
                                   <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
                                   <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
+                                  <text x={520} y={18} fontSize="10" fill={detailEvent.color}>开始-结束</text>
+                                  <text x={600} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>开始-开始</text>
                                 </>
                               );
                             })()}
