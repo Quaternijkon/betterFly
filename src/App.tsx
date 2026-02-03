@@ -62,6 +62,7 @@ interface Session {
   note?: string;
   incomplete?: boolean; // New flag: recorded for duration but not count
   rating?: number; // 1-5 rating
+  tags?: string[];
 }
 
 interface UserSettings {
@@ -1094,6 +1095,89 @@ const WeeklyRadarChart = ({ sessions, color, darkMode }: any) => {
   );
 };
 
+const ClockRadarChart = ({ sessions, darkMode }: any) => {
+  const size = 220;
+  const center = size / 2;
+  const radius = 70;
+  const dayColors = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6'];
+  const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+  if (!sessions || sessions.length === 0) {
+    return <div className="h-[220px] flex items-center justify-center text-xs text-gray-400">暂无数据</div>;
+  }
+
+  const startTimes = sessions.map((s: Session) => new Date(s.startTime).getTime()).filter(v => !isNaN(v));
+  const endTimes = sessions.map((s: Session) => s.endTime ? new Date(s.endTime).getTime() : NaN).filter(v => !isNaN(v));
+  if (startTimes.length === 0 || endTimes.length === 0) {
+    return <div className="h-[220px] flex items-center justify-center text-xs text-gray-400">数据不足</div>;
+  }
+
+  const rangeStart = new Date(Math.min(...startTimes));
+  rangeStart.setHours(0, 0, 0, 0);
+  const rangeEnd = new Date(Math.max(...endTimes));
+  rangeEnd.setHours(0, 0, 0, 0);
+
+  const dayCounts = new Float32Array(7);
+  for (let d = new Date(rangeStart); d <= rangeEnd; d.setDate(d.getDate() + 1)) {
+    const dayIndex = (d.getDay() + 6) % 7; // 0=Mon
+    dayCounts[dayIndex] += 1;
+  }
+
+  const durationSums = new Float32Array(7);
+  sessions.forEach((s: Session) => {
+    if (!s.endTime) return;
+    const end = new Date(s.endTime);
+    const dayIndex = (end.getDay() + 6) % 7; // 0=Mon
+    const duration = (new Date(s.endTime).getTime() - new Date(s.startTime).getTime()) / 1000;
+    if (!isNaN(duration) && duration >= 0) durationSums[dayIndex] += duration;
+  });
+
+  const avgHours = durationSums.map((sum, i) => (dayCounts[i] ? sum / dayCounts[i] / 3600 : 0));
+  const maxVal = Math.max(...avgHours, 1e-6);
+
+  const gridLevels = [0.25, 0.5, 0.75, 1];
+  const hourMarks = [0, 3, 6, 9];
+
+  return (
+    <div className="flex flex-col items-center justify-center p-4">
+      <div className="text-xs font-bold text-gray-400 uppercase mb-2">星期平均时长（完整区间）</div>
+      <svg width={size} height={size} className="overflow-visible">
+        {gridLevels.map(level => (
+          <circle key={level} cx={center} cy={center} r={radius * level} fill="none" stroke={darkMode ? '#374151' : '#e5e7eb'} strokeWidth="1" />
+        ))}
+        {hourMarks.map((h, idx) => {
+          const angle = (Math.PI * 2 * h) / 12 - Math.PI / 2;
+          const x = center + Math.cos(angle) * radius;
+          const y = center + Math.sin(angle) * radius;
+          const lx = center + Math.cos(angle) * (radius + 16);
+          const ly = center + Math.sin(angle) * (radius + 16);
+          return (
+            <g key={idx}>
+              <line x1={center} y1={center} x2={x} y2={y} stroke={darkMode ? '#374151' : '#e5e7eb'} strokeWidth="1" />
+              <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={darkMode ? '#9ca3af' : '#6b7280'}>{h === 0 ? 12 : h}</text>
+            </g>
+          );
+        })}
+        {avgHours.map((val, i) => {
+          const angle = (Math.PI * 2 * i) / 7 - Math.PI / 2;
+          const r = (val / maxVal) * radius;
+          const x = center + Math.cos(angle) * r;
+          const y = center + Math.sin(angle) * r;
+          return (
+            <g key={i}>
+              <line x1={center} y1={center} x2={x} y2={y} stroke={dayColors[i]} strokeWidth="3" opacity="0.9" />
+              <circle cx={x} cy={y} r="4" fill={dayColors[i]} data-tip={`${labels[i]} · ${(val).toFixed(2)}小时`} />
+              <text x={center + Math.cos(angle) * (radius + 24)} y={center + Math.sin(angle) * (radius + 24)} textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={dayColors[i]}>
+                {labels[i]}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+};
+
 const GrowthIndicator = ({ current, previous, inverse = false }: any) => {
   if (previous === 0) return <span className="text-gray-300 text-xs text-center">-</span>;
   const growth = (current - previous) / previous;
@@ -1371,6 +1455,32 @@ const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMod
   const [note, setNote] = useState(session?.note || '');
   const [incomplete, setIncomplete] = useState(session?.incomplete || false);
   const [rating, setRating] = useState(session?.rating || 0);
+  const [tags, setTags] = useState<string[]>(session?.tags || []);
+  const [newTag, setNewTag] = useState('');
+
+  const availableTags = useMemo(() => {
+    const evt = eventTypes.find((e: any) => e.id === eventId);
+    return evt?.tags || [];
+  }, [eventTypes, eventId]);
+
+  useEffect(() => {
+    if (session?.eventId !== eventId) {
+      setTags([]);
+      setNewTag('');
+    }
+  }, [eventId, session?.eventId]);
+
+  const addTag = (tag: string) => {
+    const trimmed = tag.trim();
+    if (!trimmed) return;
+    if (!tags.includes(trimmed)) setTags(prev => [...prev, trimmed]);
+    setNewTag('');
+  };
+
+  const toggleTag = (tag: string) => {
+    if (tags.includes(tag)) setTags(prev => prev.filter(t => t !== tag));
+    else setTags(prev => [...prev, tag]);
+  };
 
   const handleSave = () => {
     if (!start) return;
@@ -1378,7 +1488,7 @@ const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMod
     const newStart = new Date(start);
     const newEnd = end ? new Date(end) : null;
     if (newEnd && newEnd < newStart) return alert("结束时间不能早于开始时间");
-    onSave(session?.id, newStart.toISOString(), newEnd?.toISOString() || null, eventId, note, incomplete, rating);
+    onSave(session?.id, newStart.toISOString(), newEnd?.toISOString() || null, eventId, note, incomplete, rating, tags);
   };
 
   return (
@@ -1419,6 +1529,54 @@ const SessionModal = ({ session, eventTypes, onClose, onSave, onDelete, isAddMod
             <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center gap-3">
               <StarRating value={rating} onChange={setRating} />
               <span className="text-xs text-gray-400 font-bold ml-auto">{rating > 0 ? ['非常糟糕', '不太好', '一般', '不错', '非常棒'][rating - 1] : '待评分'}</span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">标签</label>
+            <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {availableTags.length === 0 && (
+                  <span className="text-xs text-gray-400">暂无可选标签</span>
+                )}
+                {availableTags.map((tag: string) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className={`px-2 py-1 rounded-full text-xs border transition-colors ${tags.includes(tag)
+                      ? 'bg-[rgba(var(--theme-rgb),0.15)] border-[rgba(var(--theme-rgb),0.4)] text-[rgb(var(--theme-rgb))]'
+                      : 'border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-300'
+                      }`}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(newTag); } }}
+                  className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-[#2c3038] border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 outline-none"
+                  placeholder="新增标签"
+                />
+                <button
+                  type="button"
+                  onClick={() => addTag(newTag)}
+                  className="px-3 py-2 rounded-lg bg-[rgba(var(--theme-rgb),0.12)] text-[rgb(var(--theme-rgb))] text-xs font-bold"
+                >
+                  添加
+                </button>
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map(tag => (
+                    <span key={tag} className="px-2 py-1 rounded-full text-xs bg-[rgba(var(--theme-rgb),0.12)] text-[rgb(var(--theme-rgb))]">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div>
@@ -1646,6 +1804,7 @@ export default function App() {
             note: s.note || '',
             incomplete: s.incomplete || false,
             rating: s.rating || 0,
+            tags: s.tags || [],
             startTime: Timestamp.fromDate(new Date(s.startTime)),
             endTime: s.endTime ? Timestamp.fromDate(new Date(s.endTime)) : null
           }));
@@ -1659,6 +1818,7 @@ export default function App() {
             note: s.note || '',
             incomplete: s.incomplete || false,
             rating: s.rating || 0,
+            tags: s.tags || [],
             startTime: Timestamp.fromDate(new Date(s.startTime)),
             endTime: s.endTime ? Timestamp.fromDate(new Date(s.endTime)) : null
           }));
@@ -1739,6 +1899,7 @@ export default function App() {
               note: s.note || '',
               incomplete: s.incomplete || false,
               rating: s.rating || 0,
+              tags: s.tags || [],
               startTime: Timestamp.fromDate(new Date(s.startTime)),
               endTime: s.endTime ? Timestamp.fromDate(new Date(s.endTime)) : null
             });
@@ -1969,6 +2130,7 @@ export default function App() {
             note: lSession.note || '',
             incomplete: lSession.incomplete || false,
             rating: lSession.rating || 0,
+            tags: lSession.tags || [],
             startTime: lSession.startTime ? Timestamp.fromDate(new Date(lSession.startTime)) : serverTimestamp(),
             endTime: lSession.endTime ? Timestamp.fromDate(new Date(lSession.endTime)) : null
           });
@@ -2078,6 +2240,7 @@ export default function App() {
           note: s.note || '',
           incomplete: s.incomplete || false,
           rating: s.rating || 0,
+          tags: s.tags || [],
           startTime: s.startTime ? Timestamp.fromDate(new Date(s.startTime)) : serverTimestamp(),
           endTime: s.endTime ? Timestamp.fromDate(new Date(s.endTime)) : null
         });
@@ -2129,6 +2292,7 @@ export default function App() {
           note: '',
           incomplete: false,
           rating: 0,
+          tags: [],
           startTime: Timestamp.fromDate(new Date(newSession.startTime)),
           endTime: null
         })
@@ -2136,20 +2300,21 @@ export default function App() {
     }
   };
 
-  const handleStop = async (id: string, noteStr: string, incomplete: boolean = false, rating: number = 0) => {
+  const handleStop = async (id: string, noteStr: string, incomplete: boolean = false, rating: number = 0, tags: string[] = []) => {
     const endTime = new Date().toISOString();
-    setSessions(prev => prev.map(s => s.id === id ? { ...s, endTime, note: noteStr, incomplete, rating } : s));
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, endTime, note: noteStr, incomplete, rating, tags } : s));
     setStoppingSessionId(null); setStoppingNote('');
 
     if (user) {
       const ref = doc(db, 'users', user.uid, 'sessions', id);
       await attemptWrite(
-        { type: 'sessionUpdate', payload: { id, eventId: '', startTime: '', endTime, note: noteStr, incomplete, rating } as Session },
+        { type: 'sessionUpdate', payload: { id, eventId: '', startTime: '', endTime, note: noteStr, incomplete, rating, tags } as Session },
         () => updateDoc(ref, {
           endTime: Timestamp.fromDate(new Date(endTime)),
           note: noteStr || '',
           incomplete: incomplete || false,
-          rating: rating || 0
+          rating: rating || 0,
+          tags: tags || []
         })
       );
     }
@@ -2213,19 +2378,38 @@ export default function App() {
     setEditingEventType(null);
   };
 
-  const handleUpdateSession = async (id: string, s: string, e: string | null, evId: string, n: string, inc: boolean, rate: number = 0) => {
-    setSessions(prev => prev.map(session => session.id === id ? { ...session, startTime: s, endTime: e, eventId: evId, note: n, incomplete: inc, rating: rate } : session));
+  const handleUpdateSession = async (id: string, s: string, e: string | null, evId: string, n: string, inc: boolean, rate: number = 0, tags: string[] = []) => {
+    setSessions(prev => prev.map(session => session.id === id ? { ...session, startTime: s, endTime: e, eventId: evId, note: n, incomplete: inc, rating: rate, tags } : session));
     setEditingSession(null);
+
+    if (tags.length > 0) {
+      let updatedEvent: EventType | null = null;
+      setEventTypes(prev => prev.map(ev => {
+        if (ev.id !== evId) return ev;
+        const nextTags = Array.from(new Set([...(ev.tags || []), ...tags]));
+        updatedEvent = { ...ev, tags: nextTags };
+        return updatedEvent;
+      }));
+
+      if (user && updatedEvent) {
+        const ref = doc(db, 'users', user.uid, 'event_types', updatedEvent.id);
+        await attemptWrite(
+          { type: 'eventUpdate', payload: updatedEvent },
+          () => updateDoc(ref, { tags: updatedEvent.tags || [] })
+        );
+      }
+    }
 
     if (user) {
       const ref = doc(db, 'users', user.uid, 'sessions', id);
       await attemptWrite(
-        { type: 'sessionUpdate', payload: { id, eventId: evId, startTime: s, endTime: e, note: n, incomplete: inc, rating: rate } as Session },
+        { type: 'sessionUpdate', payload: { id, eventId: evId, startTime: s, endTime: e, note: n, incomplete: inc, rating: rate, tags } as Session },
         () => updateDoc(ref, {
           eventId: evId,
           note: n || '',
           incomplete: inc || false,
           rating: rate || 0,
+          tags: tags || [],
           startTime: Timestamp.fromDate(new Date(s)),
           endTime: e ? Timestamp.fromDate(new Date(e)) : null
         })
@@ -2233,10 +2417,28 @@ export default function App() {
     }
   };
 
-  const handleAddSession = async (_id: string, s: string, e: string | null, evId: string, n: string, inc: boolean, rate: number = 0) => {
-    const newSession = { id: uuid(), startTime: s, endTime: e, eventId: evId, note: n, incomplete: inc, rating: rate };
+  const handleAddSession = async (_id: string, s: string, e: string | null, evId: string, n: string, inc: boolean, rate: number = 0, tags: string[] = []) => {
+    const newSession = { id: uuid(), startTime: s, endTime: e, eventId: evId, note: n, incomplete: inc, rating: rate, tags };
     setSessions(prev => [newSession, ...prev]);
     setIsAddMode(false);
+
+    if (tags.length > 0) {
+      let updatedEvent: EventType | null = null;
+      setEventTypes(prev => prev.map(ev => {
+        if (ev.id !== evId) return ev;
+        const nextTags = Array.from(new Set([...(ev.tags || []), ...tags]));
+        updatedEvent = { ...ev, tags: nextTags };
+        return updatedEvent;
+      }));
+
+      if (user && updatedEvent) {
+        const ref = doc(db, 'users', user.uid, 'event_types', updatedEvent.id);
+        await attemptWrite(
+          { type: 'eventUpdate', payload: updatedEvent },
+          () => updateDoc(ref, { tags: updatedEvent.tags || [] })
+        );
+      }
+    }
 
     if (user) {
       const ref = doc(db, 'users', user.uid, 'sessions', newSession.id);
@@ -2247,6 +2449,7 @@ export default function App() {
           note: n || '',
           incomplete: inc || false,
           rating: rate || 0,
+          tags: tags || [],
           startTime: Timestamp.fromDate(new Date(s)),
           endTime: e ? Timestamp.fromDate(new Date(e)) : null
         })
@@ -3826,10 +4029,17 @@ export default function App() {
 
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
-                          周分布雷达
-                          <span data-tip="完整周内各星期的总时长分布。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          雷达图
+                          <span data-tip="包含周分布与时钟雷达（按星期平均时长）。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                         </div>
-                        <WeeklyRadarChart sessions={detailSessions.filter(s => s.endTime)} darkMode={settings.darkMode} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-white/60 dark:bg-black/10 rounded-2xl">
+                            <WeeklyRadarChart sessions={detailSessions.filter(s => s.endTime)} darkMode={settings.darkMode} />
+                          </div>
+                          <div className="bg-white/60 dark:bg-black/10 rounded-2xl">
+                            <ClockRadarChart sessions={detailSessions} darkMode={settings.darkMode} />
+                          </div>
+                        </div>
                       </div>
 
                       <div className="space-y-6">
