@@ -145,6 +145,12 @@ const formatDuration = (seconds: number) => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
+const getThermalColor = (t: number) => {
+  const clamped = Math.max(0, Math.min(1, t));
+  const hue = 220 - clamped * 220;
+  return `hsl(${hue}, 90%, 50%)`;
+};
+
 const getDayKey = (dateInput: string | Date) => {
   const date = new Date(dateInput);
   const year = date.getFullYear();
@@ -582,12 +588,6 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
   const compareDataRef = useRef<{ type: '1d' | '2d'; minuteCounts?: Int32Array; grid?: Int32Array[] } | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
 
-  const getThermalColor = (t: number) => {
-    const clamped = Math.max(0, Math.min(1, t));
-    const hue = 220 - clamped * 220; // blue -> red
-    return `hsl(${hue}, 90%, 50%)`;
-  };
-
   const buildMinuteCounts = (data: any[]) => {
     const minuteCounts = new Int32Array(1440);
     data.forEach((s: any) => {
@@ -748,12 +748,6 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
     const h = Math.floor(minute / 60);
     const m = minute % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  };
-
-  const getThermalColor = (t: number) => {
-    const clamped = Math.max(0, Math.min(1, t));
-    const hue = 220 - clamped * 220;
-    return `hsl(${hue}, 90%, 50%)`;
   };
 
   const handlePointer = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>, dataset: typeof baseDataRef, container: HTMLDivElement | null) => {
