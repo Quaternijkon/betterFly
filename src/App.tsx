@@ -1749,6 +1749,7 @@ export default function App() {
   const [trendPeriod, setTrendPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [trendChartType, setTrendChartType] = useState<'line' | 'bar'>('line');
   const [spectrumRange, setSpectrumRange] = useState<'all' | '7' | '30'>('30');
+  const [polarEnvelopeBin, setPolarEnvelopeBin] = useState<30 | 60>(30);
   const [spectrumMode, setSpectrumMode] = useState<'1d' | '2d'>('1d');
   const [spectrumPalette, setSpectrumPalette] = useState<'mono' | 'thermal'>('mono');
   const [ridgePeriod, setRidgePeriod] = useState<'week' | 'month'>('week');
@@ -2746,6 +2747,39 @@ export default function App() {
     return series;
   };
 
+  const buildDailyCounts = (sourceSessions: Session[]) => {
+    const completed = sourceSessions.filter(s => s.endTime);
+    if (completed.length === 0) return [] as { date: string; value: number }[];
+    const dates = completed.map(s => getDayKey(new Date(s.endTime!)));
+    const minDate = new Date(Math.min(...dates.map(d => new Date(d).getTime())));
+    const maxDate = new Date(Math.max(...dates.map(d => new Date(d).getTime())));
+    minDate.setHours(0, 0, 0, 0);
+    maxDate.setHours(0, 0, 0, 0);
+    const map = new Map<string, number>();
+    completed.forEach(s => {
+      const key = getDayKey(new Date(s.endTime!));
+      const count = s.incomplete ? 0 : 1;
+      map.set(key, (map.get(key) || 0) + count);
+    });
+    const series: { date: string; value: number }[] = [];
+    for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
+      const key = getDayKey(d);
+      series.push({ date: key, value: map.get(key) || 0 });
+    }
+    return series;
+  };
+
+  const buildSlidingWindow = (series: { date: string; value: number }[], windowSize: number) => {
+    if (series.length === 0) return [] as { date: string; value: number }[];
+    const values = series.map(s => s.value);
+    return series.map((s, i) => {
+      const start = Math.max(0, i - windowSize + 1);
+      const slice = values.slice(start, i + 1);
+      const sum = slice.reduce((a, b) => a + b, 0);
+      return { date: s.date, value: sum };
+    });
+  };
+
   const movingAverage = (data: number[], window: number) => {
     const w = Math.max(1, window);
     return data.map((_, i) => {
@@ -3481,6 +3515,9 @@ export default function App() {
               }).filter(Boolean) as { label: string; B: number }[];
               const detailDailySeries = buildDailyTotals(detailSessions);
               const detailDailyValues = detailDailySeries.map(d => d.value);
+              const detailDailyCountSeries = buildDailyCounts(detailSessions);
+              const detailWindowDuration = buildSlidingWindow(detailDailySeries, 7);
+              const detailWindowCount = buildSlidingWindow(detailDailyCountSeries, 7);
               const detailTrend = movingAverage(detailDailyValues, 7);
               const detailSeasonal = buildSeasonal(detailDailyValues, 7);
               const detailResidual = detailDailyValues.map((v, i) => v - detailTrend[i] - detailSeasonal[i]);
@@ -3557,10 +3594,16 @@ export default function App() {
                             极坐标系
                             <span data-tip="角度=开始时间（24h），半径=持续时间；支持范围切换。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                           </div>
-                          <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
-                            <button onClick={() => setSpectrumRange('7')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === '7' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>7天</button>
-                            <button onClick={() => setSpectrumRange('30')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === '30' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>30天</button>
-                            <button onClick={() => setSpectrumRange('all')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === 'all' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>全部</button>
+                          <div className="flex flex-wrap gap-2">
+                            <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                              <button onClick={() => setSpectrumRange('7')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === '7' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>7天</button>
+                              <button onClick={() => setSpectrumRange('30')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === '30' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>30天</button>
+                              <button onClick={() => setSpectrumRange('all')} className={`px-2 py-1 rounded-md transition-all ${spectrumRange === 'all' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>全部</button>
+                            </div>
+                            <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                              <button onClick={() => setPolarEnvelopeBin(30)} className={`px-2 py-1 rounded-md transition-all ${polarEnvelopeBin === 30 ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>包络 30m</button>
+                              <button onClick={() => setPolarEnvelopeBin(60)} className={`px-2 py-1 rounded-md transition-all ${polarEnvelopeBin === 60 ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>包络 1h</button>
+                            </div>
                           </div>
                         </div>
                         {detailPolarSessions.filter(s => s.endTime).length < 2 ? (
@@ -3584,7 +3627,7 @@ export default function App() {
                                   const maxDur = Math.max(...points.map(p => p.durationMin), 1);
                                   const rScale = (val: number) => 20 + (val / maxDur) * 120;
                                   const center = 160;
-                                  const binSize = 30;
+                                  const binSize = polarEnvelopeBin;
                                   const binCount = Math.ceil(1440 / binSize);
                                   const bins = Array.from({ length: binCount }, () => 0);
                                   points.forEach(p => {
@@ -3938,6 +3981,64 @@ export default function App() {
                                   <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
                                   <text x={520} y={18} fontSize="10" fill={detailEvent.color}>开始-结束</text>
                                   <text x={600} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>开始-开始</text>
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">7天滑动窗口</div>
+                          <span data-tip="按天聚合，窗口=7天；展示总时长与总次数。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        {detailWindowDuration.length < 2 || detailWindowCount.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 200" className="w-full h-48">
+                            {(() => {
+                              const windowLen = Math.min(detailWindowDuration.length, detailWindowCount.length);
+                              const durationSeries = detailWindowDuration.slice(0, windowLen);
+                              const countSeries = detailWindowCount.slice(0, windowLen);
+                              const maxDur = Math.max(...durationSeries.map(d => d.value), 1);
+                              const maxCount = Math.max(...countSeries.map(d => d.value), 1);
+                              const pointsDur = durationSeries.map((d, i) => {
+                                const x = 40 + (i / (windowLen - 1 || 1)) * 640;
+                                const y = 160 - (d.value / maxDur) * 120;
+                                return `${x},${y}`;
+                              }).join(' ');
+                              const pointsCount = countSeries.map((d, i) => {
+                                const x = 40 + (i / (windowLen - 1 || 1)) * 640;
+                                const y = 160 - (d.value / maxCount) * 120;
+                                return `${x},${y}`;
+                              }).join(' ');
+                              return (
+                                <>
+                                  <polyline points={pointsDur} fill="none" stroke={detailEvent.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  <polyline points={pointsCount} fill="none" stroke={settings.darkMode ? '#9ca3af' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  {durationSeries.map((d, i) => {
+                                    const x = 40 + (i / (windowLen - 1 || 1)) * 640;
+                                    const y = 160 - (d.value / maxDur) * 120;
+                                    const countVal = countSeries[i]?.value || 0;
+                                    return (
+                                      <circle
+                                        key={i}
+                                        cx={x}
+                                        cy={y}
+                                        r={3}
+                                        fill={detailEvent.color}
+                                        opacity={0.85}
+                                        data-tip={`${d.date} · 时长 ${formatDuration(d.value)} · 次数 ${Math.round(countVal)}`}
+                                      />
+                                    );
+                                  })}
+                                  <line x1={40} y1={160} x2={680} y2={160} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <text x={10} y={160} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0</text>
+                                  <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxDur)}</text>
+                                  <text x={686} y={30} fontSize="10" textAnchor="end" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxCount)}次</text>
+                                  <text x={520} y={18} fontSize="10" fill={detailEvent.color}>时长</text>
+                                  <text x={585} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>次数</text>
                                 </>
                               );
                             })()}
