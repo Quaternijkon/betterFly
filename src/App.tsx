@@ -1106,8 +1106,8 @@ const ClockRadarChart = ({ sessions, darkMode }: any) => {
     return <div className="h-[220px] flex items-center justify-center text-xs text-gray-400">暂无数据</div>;
   }
 
-  const startTimes = sessions.map((s: Session) => new Date(s.startTime).getTime()).filter(v => !isNaN(v));
-  const endTimes = sessions.map((s: Session) => s.endTime ? new Date(s.endTime).getTime() : NaN).filter(v => !isNaN(v));
+  const startTimes = sessions.map((s: Session) => new Date(s.startTime).getTime()).filter((v: number) => !isNaN(v));
+  const endTimes = sessions.map((s: Session) => s.endTime ? new Date(s.endTime).getTime() : NaN).filter((v: number) => !isNaN(v));
   if (startTimes.length === 0 || endTimes.length === 0) {
     return <div className="h-[220px] flex items-center justify-center text-xs text-gray-400">数据不足</div>;
   }
@@ -1132,7 +1132,7 @@ const ClockRadarChart = ({ sessions, darkMode }: any) => {
     if (!isNaN(duration) && duration >= 0) durationSums[dayIndex] += duration;
   });
 
-  const avgHours = durationSums.map((sum, i) => (dayCounts[i] ? sum / dayCounts[i] / 3600 : 0));
+  const avgHours = Array.from(durationSums).map((sum, i) => (dayCounts[i] ? sum / dayCounts[i] / 3600 : 0));
   const maxVal = Math.max(...avgHours, 1e-6);
 
   const gridLevels = [0.25, 0.5, 0.75, 1];
@@ -2383,19 +2383,15 @@ export default function App() {
     setEditingSession(null);
 
     if (tags.length > 0) {
-      let updatedEvent: EventType | null = null;
-      setEventTypes(prev => prev.map(ev => {
-        if (ev.id !== evId) return ev;
-        const nextTags = Array.from(new Set([...(ev.tags || []), ...tags]));
-        updatedEvent = { ...ev, tags: nextTags };
-        return updatedEvent;
-      }));
+      const currentEvent = eventTypes.find(ev => ev.id === evId);
+      const nextTags = Array.from(new Set([...(currentEvent?.tags || []), ...tags]));
+      setEventTypes(prev => prev.map(ev => ev.id === evId ? { ...ev, tags: nextTags } : ev));
 
-      if (user && updatedEvent) {
-        const ref = doc(db, 'users', user.uid, 'event_types', updatedEvent.id);
+      if (user) {
+        const ref = doc(db, 'users', user.uid, 'event_types', evId);
         await attemptWrite(
-          { type: 'eventUpdate', payload: updatedEvent },
-          () => updateDoc(ref, { tags: updatedEvent.tags || [] })
+          { type: 'eventUpdate', payload: { id: evId, name: currentEvent?.name || '', color: currentEvent?.color || '#3b82f6', archived: currentEvent?.archived ?? false, createdAt: currentEvent?.createdAt || new Date().toISOString(), goal: currentEvent?.goal || null, tags: nextTags } as EventType },
+          () => updateDoc(ref, { tags: nextTags })
         );
       }
     }
@@ -2423,19 +2419,15 @@ export default function App() {
     setIsAddMode(false);
 
     if (tags.length > 0) {
-      let updatedEvent: EventType | null = null;
-      setEventTypes(prev => prev.map(ev => {
-        if (ev.id !== evId) return ev;
-        const nextTags = Array.from(new Set([...(ev.tags || []), ...tags]));
-        updatedEvent = { ...ev, tags: nextTags };
-        return updatedEvent;
-      }));
+      const currentEvent = eventTypes.find(ev => ev.id === evId);
+      const nextTags = Array.from(new Set([...(currentEvent?.tags || []), ...tags]));
+      setEventTypes(prev => prev.map(ev => ev.id === evId ? { ...ev, tags: nextTags } : ev));
 
-      if (user && updatedEvent) {
-        const ref = doc(db, 'users', user.uid, 'event_types', updatedEvent.id);
+      if (user) {
+        const ref = doc(db, 'users', user.uid, 'event_types', evId);
         await attemptWrite(
-          { type: 'eventUpdate', payload: updatedEvent },
-          () => updateDoc(ref, { tags: updatedEvent.tags || [] })
+          { type: 'eventUpdate', payload: { id: evId, name: currentEvent?.name || '', color: currentEvent?.color || '#3b82f6', archived: currentEvent?.archived ?? false, createdAt: currentEvent?.createdAt || new Date().toISOString(), goal: currentEvent?.goal || null, tags: nextTags } as EventType },
+          () => updateDoc(ref, { tags: nextTags })
         );
       }
     }
