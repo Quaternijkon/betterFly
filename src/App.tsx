@@ -1745,6 +1745,8 @@ export default function App() {
   const [spectrumRange, setSpectrumRange] = useState<'all' | '7' | '30'>('30');
   const [spectrumMode, setSpectrumMode] = useState<'1d' | '2d'>('1d');
   const [spectrumPalette, setSpectrumPalette] = useState<'mono' | 'thermal'>('mono');
+  const [ridgePeriod, setRidgePeriod] = useState<'week' | 'month'>('week');
+  const [burstPeriod, setBurstPeriod] = useState<'week' | 'month'>('week');
   const [singleDurationChartType, setSingleDurationChartType] = useState<'line' | 'bar'>('line');
   const [singleGapChartType, setSingleGapChartType] = useState<'line' | 'bar'>('line');
   const [detailEventId, setDetailEventId] = useState<string | null>(null);
@@ -2668,6 +2670,51 @@ export default function App() {
     return gaps;
   };
 
+  const buildMinuteCountsForSessions = (sourceSessions: Session[]) => {
+    const minuteCounts = new Int32Array(1440);
+    sourceSessions.forEach((s) => {
+      if (!s.startTime) return;
+      const start = new Date(s.startTime);
+      const end = s.endTime ? new Date(s.endTime) : new Date();
+      if (end.getTime() - start.getTime() > 86400000) return;
+      const startMin = start.getHours() * 60 + start.getMinutes();
+      const endMin = end.getHours() * 60 + end.getMinutes();
+      if (startMin <= endMin) {
+        for (let i = startMin; i <= endMin; i++) minuteCounts[i]++;
+      } else {
+        for (let i = startMin; i < 1440; i++) minuteCounts[i]++;
+        for (let i = 0; i <= endMin; i++) minuteCounts[i]++;
+      }
+    });
+    return minuteCounts;
+  };
+
+  const buildTimeSlices = (period: 'week' | 'month', count: number) => {
+    const now = new Date();
+    if (period === 'week') {
+      const current = new Date(now);
+      const diff = (current.getDay() - settings.weekStart + 7) % 7;
+      current.setDate(current.getDate() - diff);
+      current.setHours(0, 0, 0, 0);
+      return Array.from({ length: count }, (_, i) => {
+        const start = new Date(current);
+        start.setDate(start.getDate() - (count - 1 - i) * 7);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 7);
+        return { start, end, label: getDayKey(start) };
+      });
+    }
+    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    return Array.from({ length: count }, (_, i) => {
+      const start = new Date(currentMonth);
+      start.setMonth(start.getMonth() - (count - 1 - i));
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + 1);
+      const label = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+      return { start, end, label };
+    });
+  };
+
   const buildStartGapSeries = (relevantSessions: Session[]) => {
     const completed = relevantSessions
       .filter(s => s.endTime && !s.incomplete)
@@ -3264,6 +3311,17 @@ export default function App() {
               const detailGapSeries = buildGapSeries(detailSessions);
               const detailStartGapSeries = buildStartGapSeries(detailSessions);
               const detailCompleted = detailSessions.filter(s => s.endTime && !s.incomplete);
+              const detailInertiaPoints = (() => {
+                const ordered = detailCompleted
+                  .slice()
+                  .sort((a, b) => new Date(a.endTime!).getTime() - new Date(b.endTime!).getTime());
+                return ordered.slice(1).map((s, i) => {
+                  const prev = ordered[i];
+                  const prevDur = Math.max(0, (new Date(prev.endTime!).getTime() - new Date(prev.startTime).getTime()) / 60000);
+                  const currDur = Math.max(0, (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 60000);
+                  return { prevDur, currDur };
+                });
+              })();
               const detailBucketData = (() => {
                 if (detailCompleted.length === 0) return { bins: [], maxCount: 0, max: 0 };
                 const durationsMin = detailCompleted
@@ -3298,6 +3356,34 @@ export default function App() {
               const detailPolarSessions = getSpectrumRangeFromSessions(detailSessions, spectrumRange);
               const detailSpectrumCompare = spectrumRange === 'all' ? [] : getSpectrumRangeFromSessions(detailSessions, spectrumRange, Number(spectrumRange));
               const detailSpectrumShowCompare = spectrumRange !== 'all' && detailSpectrumCompare.length > 0;
+              const detailRidgeSlices = buildTimeSlices(ridgePeriod, ridgePeriod === 'week' ? 52 : 12);
+              const detailRidgeSeries = detailRidgeSlices.map(slice => {
+                const sliceSessions = detailSessions.filter(s => s.endTime && new Date(s.endTime) >= slice.start && new Date(s.endTime) < slice.end);
+                const counts = buildMinuteCountsForSessions(sliceSessions);
+                let max = 0;
+                for (let i = 0; i < 1440; i++) max = Math.max(max, counts[i]);
+                return { counts, max, label: slice.label };
+              });
+              const detailRidgeMax = Math.max(1, ...detailRidgeSeries.map(s => s.max));
+              const detailBurstSlices = buildTimeSlices(burstPeriod, burstPeriod === 'week' ? 52 : 12);
+              const detailBurstSeries = detailBurstSlices.map(slice => {
+                const sliceSessions = detailSessions
+                  .filter(s => s.endTime && new Date(s.endTime) >= slice.start && new Date(s.endTime) < slice.end)
+                  .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+                const gaps: number[] = [];
+                for (let i = 1; i < sliceSessions.length; i++) {
+                  const prevStart = new Date(sliceSessions[i - 1].startTime).getTime();
+                  const currStart = new Date(sliceSessions[i].startTime).getTime();
+                  const gap = (currStart - prevStart) / 1000;
+                  if (gap >= 0) gaps.push(gap);
+                }
+                if (gaps.length === 0) return { label: slice.label, B: 0 };
+                const mu = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+                const variance = gaps.reduce((a, b) => a + Math.pow(b - mu, 2), 0) / gaps.length;
+                const sigma = Math.sqrt(variance);
+                const B = (sigma - mu) / (sigma + mu);
+                return { label: slice.label, B: Math.max(-1, Math.min(1, B)) };
+              });
 
               return (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -3754,6 +3840,44 @@ export default function App() {
                     <div className="space-y-6">
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">惯性散点（上次-本次时长）</div>
+                          <span data-tip="X: 上次时长分钟；Y: 本次时长分钟。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        {detailInertiaPoints.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 220" className="w-full h-52">
+                            {(() => {
+                              const maxX = Math.max(...detailInertiaPoints.map(p => p.prevDur), 1);
+                              const maxY = Math.max(...detailInertiaPoints.map(p => p.currDur), 1);
+                              const midX = maxX / 2;
+                              const midY = maxY / 2;
+                              return (
+                                <>
+                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  {detailInertiaPoints.map((p, idx) => {
+                                    const x = 50 + (p.prevDur / maxX) * 620;
+                                    const y = 180 - (p.currDur / maxY) * 140;
+                                    return (
+                                      <circle key={idx} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.75} data-tip={`上次 ${Math.round(p.prevDur)}m · 本次 ${Math.round(p.currDur)}m`} />
+                                    );
+                                  })}
+                                  <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0m</text>
+                                  <text x={50 + (midX / maxX) * 620 - 8} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(midX)}m</text>
+                                  <text x={660} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxX)}m</text>
+                                  <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0m</text>
+                                  <text x={18} y={180 - (midY / maxY) * 140} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(midY)}m</text>
+                                  <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxY)}m</text>
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-2">
                           <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">四象限散点（时间-时长）</div>
                           <span data-tip="X: 一天内开始时间（分钟）；Y: 单次时长（分钟）；原点为 12:00 与 P50 时长。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                         </div>
@@ -4024,6 +4148,86 @@ export default function App() {
                     </div>
 
                     <div className="mt-8 space-y-6">
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            山峦图（24h 光谱）
+                            <span data-tip="按周/按月切片，展示最近 52 周/12 月的时段光谱。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                            <button onClick={() => setRidgePeriod('week')} className={`px-2 py-1 rounded-md transition-all ${ridgePeriod === 'week' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>周</button>
+                            <button onClick={() => setRidgePeriod('month')} className={`px-2 py-1 rounded-md transition-all ${ridgePeriod === 'month' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>月</button>
+                          </div>
+                        </div>
+                        <div className="max-h-[520px] overflow-y-auto m3-scrollbar">
+                          <svg viewBox={`0 0 720 ${detailRidgeSeries.length * 16 + 20}`} className="w-full h-auto">
+                            {detailRidgeSeries.map((slice, idx) => {
+                              const baseY = 20 + idx * 16 + 12;
+                              const amp = 10;
+                              const points = Array.from(slice.counts).map((v, i) => {
+                                const x = 40 + (i / 1439) * 640;
+                                const y = baseY - (v / detailRidgeMax) * amp;
+                                return `${x},${y}`;
+                              }).join(' ');
+                              return (
+                                <g key={slice.label}>
+                                  <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="1.5" opacity={0.65} />
+                                  {idx % 6 === 0 && (
+                                    <text x={4} y={baseY} fontSize="9" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{slice.label}</text>
+                                  )}
+                                </g>
+                              );
+                            })}
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            泊松爆发指数
+                            <span data-tip="B=(σ-μ)/(σ+μ)，范围 -1 到 1。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                            <button onClick={() => setBurstPeriod('week')} className={`px-2 py-1 rounded-md transition-all ${burstPeriod === 'week' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>周</button>
+                            <button onClick={() => setBurstPeriod('month')} className={`px-2 py-1 rounded-md transition-all ${burstPeriod === 'month' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>月</button>
+                          </div>
+                        </div>
+                        {detailBurstSeries.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 220" className="w-full h-52">
+                            {(() => {
+                              const points = detailBurstSeries.map((s, i) => {
+                                const x = 50 + (i / (detailBurstSeries.length - 1)) * 620;
+                                const y = 180 - ((s.B + 1) / 2) * 140;
+                                return `${x},${y}`;
+                              }).join(' ');
+                              return (
+                                <>
+                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={110} x2={690} y2={110} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="4" />
+                                  <line x1={50} y1={30} x2={690} y2={30} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="4" />
+                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="4" />
+                                  <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="2" />
+                                  {detailBurstSeries.map((s, i) => {
+                                    const x = 50 + (i / (detailBurstSeries.length - 1)) * 620;
+                                    const y = 180 - ((s.B + 1) / 2) * 140;
+                                    return (
+                                      <circle key={s.label} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`${s.label} · B=${s.B.toFixed(2)}`} />
+                                    );
+                                  })}
+                                  <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>-1</text>
+                                  <text x={18} y={112} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0</text>
+                                  <text x={18} y={32} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>1</text>
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
                           <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
