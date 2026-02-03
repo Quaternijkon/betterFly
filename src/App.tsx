@@ -1747,6 +1747,8 @@ export default function App() {
   const [spectrumPalette, setSpectrumPalette] = useState<'mono' | 'thermal'>('mono');
   const [ridgePeriod, setRidgePeriod] = useState<'week' | 'month'>('week');
   const [burstPeriod, setBurstPeriod] = useState<'week' | 'month'>('week');
+  const [acfLagMode, setAcfLagMode] = useState<'count' | 'day'>('count');
+  const [acfMetric, setAcfMetric] = useState<'duration' | 'gap'>('duration');
   const [singleDurationChartType, setSingleDurationChartType] = useState<'line' | 'bar'>('line');
   const [singleGapChartType, setSingleGapChartType] = useState<'line' | 'bar'>('line');
   const [detailEventId, setDetailEventId] = useState<string | null>(null);
@@ -2715,6 +2717,67 @@ export default function App() {
     });
   };
 
+  const buildDailyTotals = (sourceSessions: Session[]) => {
+    const completed = sourceSessions.filter(s => s.endTime);
+    if (completed.length === 0) return [] as { date: string; value: number }[];
+    const dates = completed.map(s => getDayKey(new Date(s.endTime!)));
+    const minDate = new Date(Math.min(...dates.map(d => new Date(d).getTime())));
+    const maxDate = new Date(Math.max(...dates.map(d => new Date(d).getTime())));
+    minDate.setHours(0, 0, 0, 0);
+    maxDate.setHours(0, 0, 0, 0);
+    const map = new Map<string, number>();
+    completed.forEach(s => {
+      const key = getDayKey(new Date(s.endTime!));
+      const duration = (new Date(s.endTime!).getTime() - new Date(s.startTime).getTime()) / 1000;
+      map.set(key, (map.get(key) || 0) + (isNaN(duration) ? 0 : duration));
+    });
+    const series: { date: string; value: number }[] = [];
+    for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
+      const key = getDayKey(d);
+      series.push({ date: key, value: map.get(key) || 0 });
+    }
+    return series;
+  };
+
+  const movingAverage = (data: number[], window: number) => {
+    const w = Math.max(1, window);
+    return data.map((_, i) => {
+      const start = Math.max(0, i - Math.floor(w / 2));
+      const end = Math.min(data.length - 1, i + Math.floor(w / 2));
+      const slice = data.slice(start, end + 1);
+      const sum = slice.reduce((a, b) => a + b, 0);
+      return slice.length ? sum / slice.length : 0;
+    });
+  };
+
+  const buildSeasonal = (data: number[], period: number) => {
+    if (data.length === 0) return [] as number[];
+    const sums = new Array(period).fill(0);
+    const counts = new Array(period).fill(0);
+    data.forEach((v, i) => {
+      const idx = i % period;
+      sums[idx] += v;
+      counts[idx] += 1;
+    });
+    const avgs = sums.map((s, i) => (counts[i] ? s / counts[i] : 0));
+    return data.map((_, i) => avgs[i % period]);
+  };
+
+  const computeACF = (series: number[], maxLag: number) => {
+    if (series.length < 2) return [] as { lag: number; corr: number }[];
+    const mean = series.reduce((a, b) => a + b, 0) / series.length;
+    const denom = series.reduce((a, b) => a + Math.pow(b - mean, 2), 0);
+    if (denom === 0) return Array.from({ length: maxLag }, (_, i) => ({ lag: i + 1, corr: 0 }));
+    return Array.from({ length: maxLag }, (_, i) => {
+      const lag = i + 1;
+      let num = 0;
+      for (let t = lag; t < series.length; t++) {
+        num += (series[t] - mean) * (series[t - lag] - mean);
+      }
+      return { lag, corr: num / denom };
+    });
+  };
+
   const buildStartGapSeries = (relevantSessions: Session[]) => {
     const completed = relevantSessions
       .filter(s => s.endTime && !s.incomplete)
@@ -3384,6 +3447,17 @@ export default function App() {
                 const B = (sigma - mu) / (sigma + mu);
                 return { label: slice.label, B: Math.max(-1, Math.min(1, B)) };
               });
+              const detailDailySeries = buildDailyTotals(detailSessions);
+              const detailDailyValues = detailDailySeries.map(d => d.value);
+              const detailTrend = movingAverage(detailDailyValues, 7);
+              const detailSeasonal = buildSeasonal(detailDailyValues, 7);
+              const detailResidual = detailDailyValues.map((v, i) => v - detailTrend[i] - detailSeasonal[i]);
+              const detailLagSeries = acfLagMode === 'day'
+                ? detailDailyValues
+                : (acfMetric === 'duration'
+                  ? buildDurationSeries(detailSessions.filter(s => s.endTime && !s.incomplete))
+                  : buildGapSeries(detailSessions));
+              const detailAcf = computeACF(detailLagSeries, Math.min(30, Math.max(1, detailLagSeries.length - 1)));
 
               return (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -3838,6 +3912,93 @@ export default function App() {
                     </div>
 
                     <div className="space-y-6">
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            自相关图（ACF）
+                            <span data-tip="X: 滞后阶数；Y: 相关系数。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                              <button onClick={() => setAcfLagMode('count')} className={`px-2 py-1 rounded-md transition-all ${acfLagMode === 'count' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>按次数</button>
+                              <button onClick={() => setAcfLagMode('day')} className={`px-2 py-1 rounded-md transition-all ${acfLagMode === 'day' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>按天</button>
+                            </div>
+                            {acfLagMode === 'count' && (
+                              <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
+                                <button onClick={() => setAcfMetric('duration')} className={`px-2 py-1 rounded-md transition-all ${acfMetric === 'duration' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>时长</button>
+                                <button onClick={() => setAcfMetric('gap')} className={`px-2 py-1 rounded-md transition-all ${acfMetric === 'gap' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>间隔</button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {detailAcf.length < 2 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <svg viewBox="0 0 720 220" className="w-full h-52">
+                            {(() => {
+                              const maxLag = Math.max(...detailAcf.map(d => d.lag));
+                              return (
+                                <>
+                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                  <line x1={50} y1={110} x2={690} y2={110} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="4" />
+                                  {detailAcf.map((d, i) => {
+                                    const x = 50 + (d.lag / maxLag) * 620;
+                                    const y = 110 - d.corr * 70;
+                                    return (
+                                      <g key={i}>
+                                        <line x1={x} y1={110} x2={x} y2={y} stroke={detailEvent.color} strokeWidth="2" />
+                                        <circle cx={x} cy={y} r={3} fill={detailEvent.color} data-tip={`Lag ${d.lag} · ${d.corr.toFixed(2)}`} />
+                                      </g>
+                                    );
+                                  })}
+                                  <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>1</text>
+                                  <text x={18} y={112} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0</text>
+                                  <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>-1</text>
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        )}
+                      </div>
+
+                      <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
+                          时间序列分解（STL）
+                          <span data-tip="Observed/Trend/Seasonal/Residual 垂直堆叠（加法模型）。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        </div>
+                        {detailDailySeries.length < 3 ? (
+                          <div className="text-xs text-gray-400">数据不足</div>
+                        ) : (
+                          <div className="space-y-4">
+                            {[{ label: 'Observed', data: detailDailyValues }, { label: 'Trend', data: detailTrend }, { label: 'Seasonal', data: detailSeasonal }, { label: 'Residual', data: detailResidual }].map((block) => {
+                              const maxVal = Math.max(...block.data.map(v => Math.abs(v)), 1);
+                              return (
+                                <div key={block.label}>
+                                  <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">{block.label}</div>
+                                  <svg viewBox="0 0 720 140" className="w-full h-28">
+                                    {(() => {
+                                      const points = block.data.map((v, i) => {
+                                        const x = 40 + (i / (block.data.length - 1)) * 640;
+                                        const y = 70 - (v / maxVal) * 50;
+                                        return `${x},${y}`;
+                                      }).join(' ');
+                                      return (
+                                        <>
+                                          <line x1={40} y1={70} x2={680} y2={70} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="4" />
+                                          <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="2" />
+                                        </>
+                                      );
+                                    })()}
+                                  </svg>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <div className="text-[10px] text-gray-400 mt-2">实现方式：使用 7 日移动平均提取趋势，按 7 天周期求平均作为季节项，残差 = 原始 - 趋势 - 季节。</div>
+                      </div>
+
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">惯性散点（上次-本次时长）</div>
