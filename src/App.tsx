@@ -4893,15 +4893,15 @@ export default function App() {
               </div>
               <div>
                 <div className="font-semibold">等待 (Wait)</div>
-                <div className="text-m3-on-surface-variant">两次事件之间的空窗期（头减尾）；公式：$E_{i + 1}.t_s - E_i.t_e$。</div>
+                <div className="text-m3-on-surface-variant">两次事件之间的空窗期（头减尾）；公式：$E_i + 1.t_s - E_i.t_e$。</div>
               </div>
               <div>
                 <div className="font-semibold">周期 (Cycle)</div>
-                <div className="text-m3-on-surface-variant">两次启动的时间间距（头减头）；公式：$E_{i + 1}.t_s - E_i.t_s$。</div>
+                <div className="text-m3-on-surface-variant">两次启动的时间间距（头减头）；公式：$E_i + 1.t_s - E_i.t_s$。</div>
               </div>
               <div>
                 <div className="font-semibold">间隔 (Interval)</div>
-                <div className="text-m3-on-surface-variant">两次结束的时间间距（尾减尾）；公式：$E_{i + 1}.t_e - E_i.t_e$。</div>
+                <div className="text-m3-on-surface-variant">两次结束的时间间距（尾减尾）；公式：$E_i + 1.t_e - E_i.t_e$。</div>
               </div>
             </div>
           </div>
