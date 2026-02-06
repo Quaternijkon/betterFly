@@ -496,11 +496,13 @@ const MultiSelectFilter = ({ options, selectedIds, onChange, label }: any) => {
   );
 };
 
-const TrendChart = ({ data, events, metric, darkMode, period, chartType }: any) => {
+const TrendChart = ({ data, events, metric, darkMode, period, chartType, viewMode = 'overview' }: any) => {
   const height = 280;
   const padding = 40;
   const pointSpacing = period === 'day' ? 12 : 28;
-  const width = Math.max(360, data.length * pointSpacing + padding * 2);
+  const width = viewMode === 'detail'
+    ? Math.max(720, data.length * pointSpacing + padding * 2)
+    : 720;
 
   let maxY = 0;
   data.forEach((d: any) => {
@@ -520,11 +522,13 @@ const TrendChart = ({ data, events, metric, darkMode, period, chartType }: any) 
   });
 
   const shouldShowLabel = (d: any, i: number) => {
+    if (viewMode === 'detail') return true;
     if (period === 'day') {
       if (data.length <= 14) return true;
       const date = new Date(d.date);
       return date.getDay() === 1;
     }
+    if (period === 'month') return i === 0 || i === data.length - 1;
     return true;
   };
 
@@ -534,79 +538,85 @@ const TrendChart = ({ data, events, metric, darkMode, period, chartType }: any) 
 
   return (
     <div className="w-full">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto font-sans">
-        {[0, 0.25, 0.5, 0.75, 1].map(t => {
-          const y = height - padding - t * (height - padding * 2);
-          return (
-            <g key={t}>
-              <line x1={padding} y1={y} x2={width - padding} y2={y} stroke={darkMode ? "#374151" : "#e5e7eb"} strokeDasharray="4" />
-              <text x={padding - 10} y={y + 4} textAnchor="end" fontSize="10" fill={darkMode ? "#9ca3af" : "#6b7280"}>
-                {metric === 'duration' ? (maxY * t / 3600).toFixed(1) + '小时' : Math.floor(maxY * t)}
-              </text>
-            </g>
-          );
-        })}
+      <div className={viewMode === 'detail' ? 'w-full overflow-x-auto' : 'w-full'}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="h-auto font-sans"
+          style={{ width: viewMode === 'detail' ? `${width}px` : '100%' }}
+        >
+          {[0, 0.25, 0.5, 0.75, 1].map(t => {
+            const y = height - padding - t * (height - padding * 2);
+            return (
+              <g key={t}>
+                <line x1={padding} y1={y} x2={width - padding} y2={y} stroke={darkMode ? "#374151" : "#e5e7eb"} strokeDasharray="4" />
+                <text x={padding - 10} y={y + 4} textAnchor="end" fontSize="10" fill={darkMode ? "#9ca3af" : "#6b7280"}>
+                  {metric === 'duration' ? (maxY * t / 3600).toFixed(1) + '小时' : Math.floor(maxY * t)}
+                </text>
+              </g>
+            );
+          })}
 
-        {chartType === 'bar' ? (
-          data.map((d: any, i: number) => {
-            let acc = 0;
-            return events.map((ev: any) => {
-              const val = d.values[ev.id] || 0;
-              if (val === 0) return null;
-              const x = padding + i * barWidth + 2;
-              const y = getY(acc + val);
-              const h = getY(acc) - y;
-              acc += val;
-              return (
-                <rect
-                  key={`${ev.id}-${i}`}
-                  x={x}
-                  y={y}
-                  width={Math.max(2, barWidth - 4)}
-                  height={h}
-                  rx={2}
-                  fill={ev.color}
-                  opacity={0.85}
-                  data-tip={`${d.date} · ${ev.name}: ${formatVal(val)}`}
-                />
-              );
-            });
-          })
-        ) : (
-          lines.map((line: any) => (
-            <polyline key={line.id} points={line.points} fill="none" stroke={line.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-80 hover:opacity-100 hover:stroke-[3px] transition-all" />
-          ))
-        )}
-
-        {chartType === 'line' &&
-          events.map((ev: any) =>
+          {chartType === 'bar' ? (
             data.map((d: any, i: number) => {
-              const val = d.values[ev.id] || 0;
-              if (val === 0) return null;
-              return (
-                <circle
-                  key={`${ev.id}-pt-${i}`}
-                  cx={getX(i)}
-                  cy={getY(val)}
-                  r={3}
-                  fill={ev.color}
-                  opacity={0.8}
-                  data-tip={`${d.date} · ${ev.name}: ${formatVal(val)}`}
-                />
-              );
+              let acc = 0;
+              return events.map((ev: any) => {
+                const val = d.values[ev.id] || 0;
+                if (val === 0) return null;
+                const x = padding + i * barWidth + 2;
+                const y = getY(acc + val);
+                const h = getY(acc) - y;
+                acc += val;
+                return (
+                  <rect
+                    key={`${ev.id}-${i}`}
+                    x={x}
+                    y={y}
+                    width={Math.max(2, barWidth - 4)}
+                    height={h}
+                    rx={2}
+                    fill={ev.color}
+                    opacity={0.85}
+                    data-tip={`${d.date} · ${ev.name}: ${formatVal(val)}`}
+                  />
+                );
+              });
             })
+          ) : (
+            lines.map((line: any) => (
+              <polyline key={line.id} points={line.points} fill="none" stroke={line.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-80 hover:opacity-100 hover:stroke-[3px] transition-all" />
+            ))
           )}
 
-        {data.map((d: any, i: number) => {
-          if (!shouldShowLabel(d, i)) return null;
-          const label = period === 'month' ? d.date : d.date.slice(5);
-          return (
-            <text key={i} x={getX(i)} y={height - 10} textAnchor="middle" fontSize="10" fill={darkMode ? "#9ca3af" : "#6b7280"}>
-              {label}
-            </text>
-          );
-        })}
-      </svg>
+          {chartType === 'line' &&
+            events.map((ev: any) =>
+              data.map((d: any, i: number) => {
+                const val = d.values[ev.id] || 0;
+                if (val === 0) return null;
+                return (
+                  <circle
+                    key={`${ev.id}-pt-${i}`}
+                    cx={getX(i)}
+                    cy={getY(val)}
+                    r={3}
+                    fill={ev.color}
+                    opacity={0.8}
+                    data-tip={`${d.date} · ${ev.name}: ${formatVal(val)}`}
+                  />
+                );
+              })
+            )}
+
+          {data.map((d: any, i: number) => {
+            if (!shouldShowLabel(d, i)) return null;
+            const label = period === 'month' ? d.date : d.date.slice(5);
+            return (
+              <text key={i} x={getX(i)} y={height - 10} textAnchor="middle" fontSize="10" fill={darkMode ? "#9ca3af" : "#6b7280"}>
+                {label}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
 
       <div className="flex flex-wrap gap-x-4 gap-y-2 justify-center px-2">
         {lines.map((l: any) => (
@@ -1759,6 +1769,8 @@ export default function App() {
   const [pendingSyncQueue, setPendingSyncQueueState] = useState<PendingSyncOp[]>(() => getPendingSyncQueue());
   const [lastSyncError, setLastSyncError] = useState<string | null>(null);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [chartViewMode, setChartViewMode] = useState<'overview' | 'detail'>('overview');
+  const [retentionMode, setRetentionMode] = useState<'duration' | 'wait'>('duration');
 
   // Data State
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -3342,6 +3354,20 @@ export default function App() {
                     <option value="yes">有备注</option>
                     <option value="no">无备注</option>
                   </select>
+                  <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-1 py-1 flex text-xs">
+                    <button
+                      onClick={() => setChartViewMode('overview')}
+                      className={`px-2 py-1 rounded-lg transition-all ${chartViewMode === 'overview' ? 'bg-gray-100 dark:bg-gray-700 text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}
+                    >
+                      总览
+                    </button>
+                    <button
+                      onClick={() => setChartViewMode('detail')}
+                      className={`px-2 py-1 rounded-lg transition-all ${chartViewMode === 'detail' ? 'bg-gray-100 dark:bg-gray-700 text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}
+                    >
+                      滑动
+                    </button>
+                  </div>
                 </div>
               </div>
             </header>
@@ -3863,30 +3889,57 @@ export default function App() {
                         {detailDurationSeries.length < 2 ? (
                           <div className="text-xs text-gray-400">数据不足</div>
                         ) : (
-                          <svg viewBox="0 0 720 180" className="w-full h-44">
-                            {(() => {
-                              const maxVal = Math.max(...detailDurationSeries);
-                              const minVal = Math.min(...detailDurationSeries);
-                              const range = Math.max(1, maxVal - minVal);
-                              const midVal = (minVal + maxVal) / 2;
-                              if (singleDurationChartType === 'bar') {
-                                const barWidth = 640 / detailDurationSeries.length;
+                          <div className={chartViewMode === 'detail' ? 'w-full overflow-x-auto' : 'w-full'}>
+                            <svg
+                              viewBox={`0 0 ${chartViewMode === 'detail' ? Math.max(720, detailDurationSeries.length * 18 + 200) : 720} 180`}
+                              className="h-44"
+                              style={{ width: chartViewMode === 'detail' ? `${Math.max(720, detailDurationSeries.length * 18 + 200)}px` : '100%' }}
+                            >
+                              {(() => {
+                                const maxVal = Math.max(...detailDurationSeries);
+                                const minVal = Math.min(...detailDurationSeries);
+                                const range = Math.max(1, maxVal - minVal);
+                                const midVal = (minVal + maxVal) / 2;
+                                if (singleDurationChartType === 'bar') {
+                                  const barWidth = 640 / detailDurationSeries.length;
+                                  return (
+                                    <>
+                                      {detailDurationSeries.map((v, i) => {
+                                        const h = ((v - minVal) / range) * 120;
+                                        return (
+                                          <rect
+                                            key={i}
+                                            x={40 + i * barWidth}
+                                            y={150 - h}
+                                            width={Math.max(4, barWidth - 4)}
+                                            height={h}
+                                            rx={2}
+                                            fill={detailEvent.color}
+                                            opacity={0.8}
+                                            data-tip={`第${i + 1}次 · ${formatDuration(v)}`}
+                                          />
+                                        );
+                                      })}
+                                      <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                      <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(minVal)}</text>
+                                      <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(midVal)}</text>
+                                      <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxVal)}</text>
+                                    </>
+                                  );
+                                }
+                                const points = detailDurationSeries.map((v, i) => {
+                                  const x = 40 + (i / (detailDurationSeries.length - 1)) * 640;
+                                  const y = 150 - ((v - minVal) / range) * 120;
+                                  return `${x},${y}`;
+                                }).join(' ');
                                 return (
                                   <>
+                                    <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     {detailDurationSeries.map((v, i) => {
-                                      const h = ((v - minVal) / range) * 120;
+                                      const x = 40 + (i / (detailDurationSeries.length - 1)) * 640;
+                                      const y = 150 - ((v - minVal) / range) * 120;
                                       return (
-                                        <rect
-                                          key={i}
-                                          x={40 + i * barWidth}
-                                          y={150 - h}
-                                          width={Math.max(4, barWidth - 4)}
-                                          height={h}
-                                          rx={2}
-                                          fill={detailEvent.color}
-                                          opacity={0.8}
-                                          data-tip={`第${i + 1}次 · ${formatDuration(v)}`}
-                                        />
+                                        <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`第${i + 1}次 · ${formatDuration(v)}`} />
                                       );
                                     })}
                                     <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
@@ -3895,30 +3948,9 @@ export default function App() {
                                     <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxVal)}</text>
                                   </>
                                 );
-                              }
-                              const points = detailDurationSeries.map((v, i) => {
-                                const x = 40 + (i / (detailDurationSeries.length - 1)) * 640;
-                                const y = 150 - ((v - minVal) / range) * 120;
-                                return `${x},${y}`;
-                              }).join(' ');
-                              return (
-                                <>
-                                  <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                  {detailDurationSeries.map((v, i) => {
-                                    const x = 40 + (i / (detailDurationSeries.length - 1)) * 640;
-                                    const y = 150 - ((v - minVal) / range) * 120;
-                                    return (
-                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`第${i + 1}次 · ${formatDuration(v)}`} />
-                                    );
-                                  })}
-                                  <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                  <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(minVal)}</text>
-                                  <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(midVal)}</text>
-                                  <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxVal)}</text>
-                                </>
-                              );
-                            })()}
-                          </svg>
+                              })()}
+                            </svg>
+                          </div>
                         )}
                       </div>
 
@@ -3936,98 +3968,104 @@ export default function App() {
                         {detailGapSeries.length < 2 ? (
                           <div className="text-xs text-gray-400">数据不足</div>
                         ) : (
-                          <svg viewBox="0 0 720 180" className="w-full h-44">
-                            {(() => {
-                              const toHours = (sec: number) => sec / 3600;
-                              const logValue = (sec: number) => Math.log2(toHours(sec) + 1);
-                              const logVals = detailGapSeries.map(logValue);
-                              const logValsStart = detailStartGapSeries.map(logValue);
-                              const allLogs = [...logVals, ...logValsStart];
-                              const maxVal = Math.max(...allLogs);
-                              const minVal = Math.min(...allLogs);
-                              const range = Math.max(1e-6, maxVal - minVal);
-                              const rawMin = Math.min(...detailGapSeries);
-                              const rawMax = Math.max(...detailGapSeries);
-                              const rawMid = (rawMin + rawMax) / 2;
-                              const anchorHours = [1, 12, 24];
-                              const anchorLines = anchorHours.map(hour => {
-                                const v = Math.log2(hour + 1);
-                                const y = 150 - ((v - minVal) / range) * 120;
-                                return { sec: hour * 3600, y };
-                              });
-                              if (singleGapChartType === 'bar') {
-                                const barWidth = 640 / logVals.length;
+                          <div className={chartViewMode === 'detail' ? 'w-full overflow-x-auto' : 'w-full'}>
+                            <svg
+                              viewBox={`0 0 ${chartViewMode === 'detail' ? Math.max(720, detailGapSeries.length * 18 + 200) : 720} 180`}
+                              className="h-44"
+                              style={{ width: chartViewMode === 'detail' ? `${Math.max(720, detailGapSeries.length * 18 + 200)}px` : '100%' }}
+                            >
+                              {(() => {
+                                const toHours = (sec: number) => sec / 3600;
+                                const logValue = (sec: number) => Math.log2(toHours(sec) + 1);
+                                const logVals = detailGapSeries.map(logValue);
+                                const logValsStart = detailStartGapSeries.map(logValue);
+                                const allLogs = [...logVals, ...logValsStart];
+                                const maxVal = Math.max(...allLogs);
+                                const minVal = Math.min(...allLogs);
+                                const range = Math.max(1e-6, maxVal - minVal);
+                                const rawMin = Math.min(...detailGapSeries);
+                                const rawMax = Math.max(...detailGapSeries);
+                                const rawMid = (rawMin + rawMax) / 2;
+                                const anchorHours = [1, 12, 24];
+                                const anchorLines = anchorHours.map(hour => {
+                                  const v = Math.log2(hour + 1);
+                                  const y = 150 - ((v - minVal) / range) * 120;
+                                  return { sec: hour * 3600, y };
+                                });
+                                if (singleGapChartType === 'bar') {
+                                  const barWidth = 640 / logVals.length;
+                                  return (
+                                    <>
+                                      {anchorLines.map((a) => (
+                                        <line key={a.sec} x1={40} y1={a.y} x2={680} y2={a.y} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="3" />
+                                      ))}
+                                      {logVals.map((v, i) => {
+                                        const h = ((v - minVal) / range) * 120;
+                                        return (
+                                          <rect
+                                            key={i}
+                                            x={40 + i * barWidth}
+                                            y={150 - h}
+                                            width={Math.max(4, barWidth - 4)}
+                                            height={h}
+                                            rx={2}
+                                            fill={detailEvent.color}
+                                            opacity={0.8}
+                                            data-tip={`等待${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`}
+                                          />
+                                        );
+                                      })}
+                                      <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                      <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
+                                      <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
+                                      <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
+                                    </>
+                                  );
+                                }
+                                const points = logVals.map((v, i) => {
+                                  const x = 40 + (i / (logVals.length - 1)) * 640;
+                                  const y = 150 - ((v - minVal) / range) * 120;
+                                  return `${x},${y}`;
+                                }).join(' ');
+                                const pointsStart = logValsStart.map((v, i) => {
+                                  const x = 40 + (i / (logValsStart.length - 1 || 1)) * 640;
+                                  const y = 150 - ((v - minVal) / range) * 120;
+                                  return `${x},${y}`;
+                                }).join(' ');
                                 return (
                                   <>
                                     {anchorLines.map((a) => (
                                       <line key={a.sec} x1={40} y1={a.y} x2={680} y2={a.y} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="3" />
                                     ))}
+                                    <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    {pointsStart && (
+                                      <polyline points={pointsStart} fill="none" stroke={settings.darkMode ? '#9ca3af' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    )}
                                     {logVals.map((v, i) => {
-                                      const h = ((v - minVal) / range) * 120;
+                                      const x = 40 + (i / (logVals.length - 1)) * 640;
+                                      const y = 150 - ((v - minVal) / range) * 120;
                                       return (
-                                        <rect
-                                          key={i}
-                                          x={40 + i * barWidth}
-                                          y={150 - h}
-                                          width={Math.max(4, barWidth - 4)}
-                                          height={h}
-                                          rx={2}
-                                          fill={detailEvent.color}
-                                          opacity={0.8}
-                                          data-tip={`等待${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`}
-                                        />
+                                        <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`等待${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`} />
+                                      );
+                                    })}
+                                    {logValsStart.map((v, i) => {
+                                      const x = 40 + (i / (logValsStart.length - 1 || 1)) * 640;
+                                      const y = 150 - ((v - minVal) / range) * 120;
+                                      return (
+                                        <circle key={`s-${i}`} cx={x} cy={y} r={3} fill={settings.darkMode ? '#9ca3af' : '#6b7280'} opacity={0.8} data-tip={`周期${i + 1} · ${formatDuration(detailStartGapSeries[i] || 0)}`} />
                                       );
                                     })}
                                     <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
                                     <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
                                     <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
                                     <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
+                                    <text x={520} y={18} fontSize="10" fill={detailEvent.color}>等待</text>
+                                    <text x={600} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>周期</text>
                                   </>
                                 );
-                              }
-                              const points = logVals.map((v, i) => {
-                                const x = 40 + (i / (logVals.length - 1)) * 640;
-                                const y = 150 - ((v - minVal) / range) * 120;
-                                return `${x},${y}`;
-                              }).join(' ');
-                              const pointsStart = logValsStart.map((v, i) => {
-                                const x = 40 + (i / (logValsStart.length - 1 || 1)) * 640;
-                                const y = 150 - ((v - minVal) / range) * 120;
-                                return `${x},${y}`;
-                              }).join(' ');
-                              return (
-                                <>
-                                  {anchorLines.map((a) => (
-                                    <line key={a.sec} x1={40} y1={a.y} x2={680} y2={a.y} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="3" />
-                                  ))}
-                                  <polyline points={points} fill="none" stroke={detailEvent.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                  {pointsStart && (
-                                    <polyline points={pointsStart} fill="none" stroke={settings.darkMode ? '#9ca3af' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                  )}
-                                  {logVals.map((v, i) => {
-                                    const x = 40 + (i / (logVals.length - 1)) * 640;
-                                    const y = 150 - ((v - minVal) / range) * 120;
-                                    return (
-                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`等待${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`} />
-                                    );
-                                  })}
-                                  {logValsStart.map((v, i) => {
-                                    const x = 40 + (i / (logValsStart.length - 1 || 1)) * 640;
-                                    const y = 150 - ((v - minVal) / range) * 120;
-                                    return (
-                                      <circle key={`s-${i}`} cx={x} cy={y} r={3} fill={settings.darkMode ? '#9ca3af' : '#6b7280'} opacity={0.8} data-tip={`周期${i + 1} · ${formatDuration(detailStartGapSeries[i] || 0)}`} />
-                                    );
-                                  })}
-                                  <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                  <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
-                                  <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
-                                  <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
-                                  <text x={520} y={18} fontSize="10" fill={detailEvent.color}>等待</text>
-                                  <text x={600} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>周期</text>
-                                </>
-                              );
-                            })()}
-                          </svg>
+                              })()}
+                            </svg>
+                          </div>
                         )}
                       </div>
 
@@ -4039,53 +4077,59 @@ export default function App() {
                         {detailWindowDuration.length < 2 || detailWindowCount.length < 2 ? (
                           <div className="text-xs text-gray-400">数据不足</div>
                         ) : (
-                          <svg viewBox="0 0 720 200" className="w-full h-48">
-                            {(() => {
-                              const windowLen = Math.min(detailWindowDuration.length, detailWindowCount.length);
-                              const durationSeries = detailWindowDuration.slice(0, windowLen);
-                              const countSeries = detailWindowCount.slice(0, windowLen);
-                              const maxDur = Math.max(...durationSeries.map(d => d.value), 1);
-                              const maxCount = Math.max(...countSeries.map(d => d.value), 1);
-                              const pointsDur = durationSeries.map((d, i) => {
-                                const x = 40 + (i / (windowLen - 1 || 1)) * 640;
-                                const y = 160 - (d.value / maxDur) * 120;
-                                return `${x},${y}`;
-                              }).join(' ');
-                              const pointsCount = countSeries.map((d, i) => {
-                                const x = 40 + (i / (windowLen - 1 || 1)) * 640;
-                                const y = 160 - (d.value / maxCount) * 120;
-                                return `${x},${y}`;
-                              }).join(' ');
-                              return (
-                                <>
-                                  <polyline points={pointsDur} fill="none" stroke={detailEvent.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                  <polyline points={pointsCount} fill="none" stroke={settings.darkMode ? '#9ca3af' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                  {durationSeries.map((d, i) => {
-                                    const x = 40 + (i / (windowLen - 1 || 1)) * 640;
-                                    const y = 160 - (d.value / maxDur) * 120;
-                                    const countVal = countSeries[i]?.value || 0;
-                                    return (
-                                      <circle
-                                        key={i}
-                                        cx={x}
-                                        cy={y}
-                                        r={3}
-                                        fill={detailEvent.color}
-                                        opacity={0.85}
-                                        data-tip={`${d.date} · 持续 ${formatDuration(d.value)} · 次数 ${Math.round(countVal)}`}
-                                      />
-                                    );
-                                  })}
-                                  <line x1={40} y1={160} x2={680} y2={160} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                  <text x={10} y={160} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0</text>
-                                  <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxDur)}</text>
-                                  <text x={686} y={30} fontSize="10" textAnchor="end" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxCount)}次</text>
-                                  <text x={520} y={18} fontSize="10" fill={detailEvent.color}>持续</text>
-                                  <text x={585} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>次数</text>
-                                </>
-                              );
-                            })()}
-                          </svg>
+                          <div className={chartViewMode === 'detail' ? 'w-full overflow-x-auto' : 'w-full'}>
+                            <svg
+                              viewBox={`0 0 ${chartViewMode === 'detail' ? Math.max(720, Math.min(detailWindowDuration.length, detailWindowCount.length) * 18 + 200) : 720} 200`}
+                              className="h-48"
+                              style={{ width: chartViewMode === 'detail' ? `${Math.max(720, Math.min(detailWindowDuration.length, detailWindowCount.length) * 18 + 200)}px` : '100%' }}
+                            >
+                              {(() => {
+                                const windowLen = Math.min(detailWindowDuration.length, detailWindowCount.length);
+                                const durationSeries = detailWindowDuration.slice(0, windowLen);
+                                const countSeries = detailWindowCount.slice(0, windowLen);
+                                const maxDur = Math.max(...durationSeries.map(d => d.value), 1);
+                                const maxCount = Math.max(...countSeries.map(d => d.value), 1);
+                                const pointsDur = durationSeries.map((d, i) => {
+                                  const x = 40 + (i / (windowLen - 1 || 1)) * 640;
+                                  const y = 160 - (d.value / maxDur) * 120;
+                                  return `${x},${y}`;
+                                }).join(' ');
+                                const pointsCount = countSeries.map((d, i) => {
+                                  const x = 40 + (i / (windowLen - 1 || 1)) * 640;
+                                  const y = 160 - (d.value / maxCount) * 120;
+                                  return `${x},${y}`;
+                                }).join(' ');
+                                return (
+                                  <>
+                                    <polyline points={pointsDur} fill="none" stroke={detailEvent.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <polyline points={pointsCount} fill="none" stroke={settings.darkMode ? '#9ca3af' : '#6b7280'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    {durationSeries.map((d, i) => {
+                                      const x = 40 + (i / (windowLen - 1 || 1)) * 640;
+                                      const y = 160 - (d.value / maxDur) * 120;
+                                      const countVal = countSeries[i]?.value || 0;
+                                      return (
+                                        <circle
+                                          key={i}
+                                          cx={x}
+                                          cy={y}
+                                          r={3}
+                                          fill={detailEvent.color}
+                                          opacity={0.85}
+                                          data-tip={`${d.date} · 持续 ${formatDuration(d.value)} · 次数 ${Math.round(countVal)}`}
+                                        />
+                                      );
+                                    })}
+                                    <line x1={40} y1={160} x2={680} y2={160} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                    <text x={10} y={160} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0</text>
+                                    <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxDur)}</text>
+                                    <text x={686} y={30} fontSize="10" textAnchor="end" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxCount)}次</text>
+                                    <text x={520} y={18} fontSize="10" fill={detailEvent.color}>持续</text>
+                                    <text x={585} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>次数</text>
+                                  </>
+                                );
+                              })()}
+                            </svg>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -4385,48 +4429,69 @@ export default function App() {
                       </div>
 
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">留存概率</div>
-                          <span data-tip="X: 已坚持分钟；Y: 继续坚持的概率。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">留存概率</div>
+                            <span data-tip={retentionMode === 'duration' ? 'X: 已坚持分钟；Y: 继续坚持的概率。' : 'X: 等待分钟；Y: 再次开始的概率。'} className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          </div>
+                          <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
+                            <button onClick={() => setRetentionMode('duration')} className={`px-2 py-0.5 rounded-md transition-all ${retentionMode === 'duration' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>持续</button>
+                            <button onClick={() => setRetentionMode('wait')} className={`px-2 py-0.5 rounded-md transition-all ${retentionMode === 'wait' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>等待</button>
+                          </div>
                         </div>
-                        {detailDurationSeries.length < 2 ? (
+                        {(retentionMode === 'duration' ? detailDurationSeries.length < 2 : detailGapSeries.length < 2) ? (
                           <div className="text-xs text-gray-400">数据不足</div>
                         ) : (
-                          <svg viewBox="0 0 720 220" className="w-full h-52">
-                            {(() => {
-                              const durationsMin = detailDurationSeries.map(v => v / 60).sort((a, b) => a - b);
-                              const total = durationsMin.length;
-                              const unique = Array.from(new Set(durationsMin));
-                              const points = unique.map(val => {
-                                const survivors = durationsMin.filter(d => d >= val).length;
-                                return { x: val, y: survivors / total };
-                              });
-                              const maxX = Math.max(...points.map(p => p.x), 1);
-                              const path = points.map((p, i) => {
-                                const x = 50 + (p.x / maxX) * 620;
-                                const y = 180 - p.y * 140;
-                                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                              }).join(' ');
-                              return (
-                                <>
-                                  <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                  <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
-                                  <path d={path} fill="none" stroke={detailEvent.color} strokeWidth={2} />
-                                  {points.map((p, i) => {
-                                    const x = 50 + (p.x / maxX) * 620;
-                                    const y = 180 - p.y * 140;
-                                    return (
-                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`坚持 ${p.x.toFixed(1)} 分钟后继续概率 ${(p.y * 100).toFixed(1)}%`} />
-                                    );
-                                  })}
-                                  <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0分钟</text>
-                                  <text x={660} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxX)}分钟</text>
-                                  <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0%</text>
-                                  <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>100%</text>
-                                </>
-                              );
-                            })()}
-                          </svg>
+                          <div className={chartViewMode === 'detail' ? 'w-full overflow-x-auto' : 'w-full'}>
+                            <svg
+                              viewBox={`0 0 ${chartViewMode === 'detail' ? Math.max(720, (retentionMode === 'duration' ? detailDurationSeries.length : detailGapSeries.length) * 18 + 200) : 720} 220`}
+                              className="h-52"
+                              style={{ width: chartViewMode === 'detail' ? `${Math.max(720, (retentionMode === 'duration' ? detailDurationSeries.length : detailGapSeries.length) * 18 + 200)}px` : '100%' }}
+                            >
+                              {(() => {
+                                const isDuration = retentionMode === 'duration';
+                                const source = isDuration ? detailDurationSeries.map(v => v / 60) : detailGapSeries.map(v => v / 60);
+                                const sorted = source.slice().sort((a, b) => a - b);
+                                const total = sorted.length;
+                                const unique = Array.from(new Set(sorted));
+                                const points = unique.map(val => {
+                                  if (isDuration) {
+                                    const survivors = sorted.filter(d => d >= val).length;
+                                    return { x: val, y: survivors / total };
+                                  }
+                                  const started = sorted.filter(d => d <= val).length;
+                                  return { x: val, y: started / total };
+                                });
+                                const maxX = Math.max(...points.map(p => p.x), 1);
+                                const path = points.map((p, i) => {
+                                  const x = 50 + (p.x / maxX) * 620;
+                                  const y = 180 - p.y * 140;
+                                  return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                                }).join(' ');
+                                return (
+                                  <>
+                                    <line x1={50} y1={180} x2={690} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                    <line x1={50} y1={30} x2={50} y2={180} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
+                                    <path d={path} fill="none" stroke={detailEvent.color} strokeWidth={2} />
+                                    {points.map((p, i) => {
+                                      const x = 50 + (p.x / maxX) * 620;
+                                      const y = 180 - p.y * 140;
+                                      const tip = isDuration
+                                        ? `坚持 ${p.x.toFixed(1)} 分钟后继续概率 ${(p.y * 100).toFixed(1)}%`
+                                        : `等待 ${p.x.toFixed(1)} 分钟后启动概率 ${(p.y * 100).toFixed(1)}%`;
+                                      return (
+                                        <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={tip} />
+                                      );
+                                    })}
+                                    <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0分钟</text>
+                                    <text x={660} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxX)}分钟</text>
+                                    <text x={18} y={180} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0%</text>
+                                    <text x={18} y={40} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>100%</text>
+                                  </>
+                                );
+                              })()}
+                            </svg>
+                          </div>
                         )}
                       </div>
 
@@ -4624,7 +4689,7 @@ export default function App() {
                             </div>
                           </div>
                         </div>
-                        <TrendChart data={detailTrendData} events={[detailEvent]} metric={trendMetric} darkMode={settings.darkMode} period={trendPeriod} chartType={trendChartType} />
+                        <TrendChart data={detailTrendData} events={[detailEvent]} metric={trendMetric} darkMode={settings.darkMode} period={trendPeriod} chartType={trendChartType} viewMode={chartViewMode} />
                       </div>
 
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
@@ -4875,7 +4940,13 @@ export default function App() {
           >
             <div className="flex items-start justify-between mb-6">
               <div>
-                <h3 className="text-xl font-semibold text-m3-on-surface">术语文档</h3>
+                <div className="text-xl font-semibold text-m3-on-surface flex items-baseline gap-2">
+                  <span className="text-[#4285F4] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>C</span>
+                  <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>D</span>
+                  <span className="text-[#FBBC05] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>W</span>
+                  <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>I</span>
+                  <span className="text-sm text-m3-on-surface-variant">系统</span>
+                </div>
                 <p className="text-xs text-m3-on-surface-variant mt-1">持续 / 等待 / 周期 / 间隔</p>
               </div>
               <button
@@ -4889,19 +4960,19 @@ export default function App() {
             <div className="bg-white/70 dark:bg-black/10 rounded-2xl p-4 md:p-5 space-y-3 text-sm text-m3-on-surface">
               <div>
                 <div className="font-semibold">持续 (Duration)</div>
-                <div className="text-m3-on-surface-variant">同一次事件执行的时长；公式：$E_i.t_e - E_i.t_s$。</div>
+                <div className="text-m3-on-surface-variant">同一次事件执行的时长；公式：E_i.t_e - E_i.t_s。</div>
               </div>
               <div>
                 <div className="font-semibold">等待 (Wait)</div>
-                <div className="text-m3-on-surface-variant">两次事件之间的空窗期（头减尾）；公式：$E_i + 1.t_s - E_i.t_e$。</div>
+                <div className="text-m3-on-surface-variant">两次事件之间的空窗期（头减尾）；公式：E(i+1).t_s - E_i.t_e。</div>
               </div>
               <div>
                 <div className="font-semibold">周期 (Cycle)</div>
-                <div className="text-m3-on-surface-variant">两次启动的时间间距（头减头）；公式：$E_i + 1.t_s - E_i.t_s$。</div>
+                <div className="text-m3-on-surface-variant">两次启动的时间间距（头减头）；公式：E(i+1).t_s - E_i.t_s。</div>
               </div>
               <div>
                 <div className="font-semibold">间隔 (Interval)</div>
-                <div className="text-m3-on-surface-variant">两次结束的时间间距（尾减尾）；公式：$E_i + 1.t_e - E_i.t_e$。</div>
+                <div className="text-m3-on-surface-variant">两次结束的时间间距（尾减尾）；公式：E(i+1).t_e - E_i.t_e。</div>
               </div>
             </div>
           </div>
