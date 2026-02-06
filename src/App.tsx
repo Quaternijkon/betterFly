@@ -1193,7 +1193,7 @@ const ClockRadarChart = ({ sessions, darkMode }: any) => {
 
   return (
     <div className="flex flex-col items-center justify-center p-4">
-      <div className="text-xs font-bold text-gray-400 uppercase mb-2">星期平均时长（完整区间）</div>
+      <div className="text-xs font-bold text-gray-400 uppercase mb-2">星期平均持续（完整区间）</div>
       <svg width={size} height={size} className="overflow-visible">
         {gridLevels.map(level => (
           <circle key={level} cx={center} cy={center} r={radius * level} fill="none" stroke={darkMode ? '#374151' : '#e5e7eb'} strokeWidth="1" />
@@ -1426,7 +1426,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                     <label className="text-[10px] text-gray-400 font-bold uppercase ml-2">单位</label>
                     <select value={goal.metric} onChange={e => setGoal({ ...goal, metric: e.target.value as any })} className="w-full p-3 rounded-xl bg-white dark:bg-[#1e2025] border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm outline-none focus:ring-2 focus:ring-[rgba(var(--theme-rgb),0.2)]">
                       <option value="count">次数</option>
-                      <option value="duration">时长（秒）</option>
+                      <option value="duration">持续（秒）</option>
                     </select>
                   </div>
                 </div>
@@ -1434,7 +1434,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                 {/* 4. Value */}
                 <div className="space-y-1">
                   <label className="text-[10px] text-gray-400 font-bold uppercase ml-2">
-                    {goal.type === 'positive' ? '目标数值 (≥)' : '限制数值 (≤)'} - {goal.metric === 'duration' ? '时长' : '次数'}
+                    {goal.type === 'positive' ? '目标数值 (≥)' : '限制数值 (≤)'} - {goal.metric === 'duration' ? '持续' : '次数'}
                   </label>
 
                   {goal.metric === 'duration' ? (
@@ -1482,7 +1482,7 @@ const EditEventModal = ({ eventType, onClose, onSave, onDelete }: any) => {
                   )}
 
                   <div className="text-[10px] text-gray-400 text-right px-2">
-                    {goal.metric === 'duration' ? 'Tips: 设置目标持续时间' : 'Tips: 设定目标计数值'}
+                    {goal.metric === 'duration' ? 'Tips: 设置目标持续' : 'Tips: 设定目标计数值'}
                   </div>
                 </div>
               </div>
@@ -3356,7 +3356,7 @@ export default function App() {
                           </div>
                           <div>
                             <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{formatDuration(stats.totalDuration)}</div>
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">时长</div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">持续</div>
                           </div>
                           <div>
                             <div className="text-xl font-light text-gray-900 dark:text-white font-mono">
@@ -3380,19 +3380,19 @@ export default function App() {
                             <div className="text-xl font-light text-gray-900 dark:text-white font-mono">
                               {durationStats.avg === null ? '-' : formatDuration(durationStats.avg)}
                             </div>
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">平均时长</div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">平均持续</div>
                           </div>
                           <div>
                             <div className="text-xl font-light text-gray-900 dark:text-white font-mono">
                               {durationStats.median === null ? '-' : formatDuration(durationStats.median)}
                             </div>
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">中位数时长</div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">中位数持续</div>
                           </div>
                           <div>
                             <div className="text-xl font-light text-gray-900 dark:text-white font-mono">
                               {durationStats.p90 === null ? '-' : formatDuration(durationStats.p90)}
                             </div>
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">P90 时长</div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">P90 持续</div>
                           </div>
                         </div>
 
@@ -3544,18 +3544,23 @@ export default function App() {
                     onTouchMove={handleChartTooltipMove}
                     onTouchEnd={clearChartTooltip}
                   >
-                    <div className="sticky top-0 z-10 -mx-6 md:-mx-8 px-6 md:px-8 pt-2 pb-4 mb-6 bg-white/95 dark:bg-[#1e2330]/95 backdrop-blur border-b border-gray-100/60 dark:border-gray-700/60">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-2 h-8 rounded-full" style={{ backgroundColor: detailEvent.color }} />
-                          <div>
-                            <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">{detailEvent.name}</h3>
-                            <p className="text-xs text-gray-400">单事件详细分析</p>
-                          </div>
+                    <div className="sticky top-4 z-20 flex justify-end pointer-events-none">
+                      <button
+                        onClick={() => setDetailEventId(null)}
+                        className="pointer-events-auto p-2 rounded-full bg-white/90 dark:bg-[#1e2330]/90 border border-gray-200/60 dark:border-gray-700/60 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 backdrop-blur"
+                        aria-label="关闭"
+                      >
+                        <Icons.X size={18} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-8 rounded-full" style={{ backgroundColor: detailEvent.color }} />
+                        <div>
+                          <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">{detailEvent.name}</h3>
+                          <p className="text-xs text-gray-400">单事件详细分析</p>
                         </div>
-                        <button onClick={() => setDetailEventId(null)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <Icons.X size={18} />
-                        </button>
                       </div>
                     </div>
 
@@ -3566,7 +3571,7 @@ export default function App() {
                       </div>
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{formatDuration(detailStats.totalDuration)}</div>
-                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">总时长</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">总持续</div>
                       </div>
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailExtras.maxDuration === null ? '-' : formatDuration(detailExtras.maxDuration)}</div>
@@ -3582,15 +3587,15 @@ export default function App() {
                       </div>
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailDurationStats.avg === null ? '-' : formatDuration(detailDurationStats.avg)}</div>
-                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">平均时长</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">平均持续</div>
                       </div>
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailDurationStats.median === null ? '-' : formatDuration(detailDurationStats.median)}</div>
-                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">中位数</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">中位数持续</div>
                       </div>
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="text-xl font-light text-gray-900 dark:text-white font-mono">{detailDurationStats.p90 === null ? '-' : formatDuration(detailDurationStats.p90)}</div>
-                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">P90 时长</div>
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">P90 持续</div>
                       </div>
                     </div>
 
@@ -3659,7 +3664,7 @@ export default function App() {
                                         const y = center + Math.sin(p.angle) * r;
                                         const hourDecimal = (p.startMinutes / 60).toFixed(2);
                                         return (
-                                          <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`开始 ${hourDecimal}h · 时长 ${Math.round(p.durationMin)} 分钟`} />
+                                          <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`开始 ${hourDecimal}h · 持续 ${Math.round(p.durationMin)} 分钟`} />
                                         );
                                       })}
                                     </>
@@ -3723,8 +3728,8 @@ export default function App() {
                       </div>
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">时长分布（动态分箱）</div>
-                          <span data-tip="根据完成时长自动分箱，Y 为频次。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">持续分布（动态分箱）</div>
+                          <span data-tip="根据完成持续自动分箱，Y 为频次。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                         </div>
                         {detailHistogram.bins.length === 0 ? (
                           <div className="text-xs text-gray-400">暂无完成记录</div>
@@ -3767,7 +3772,7 @@ export default function App() {
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">时长分布（固定分箱）</div>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">持续分布（固定分箱）</div>
                             <span data-tip="按固定桶宽统计频次。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                           </div>
                           <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
@@ -3817,8 +3822,8 @@ export default function App() {
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">单次时长</div>
-                            <span data-tip="每次完成的时长序列。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">单次持续</div>
+                            <span data-tip="每次完成的持续序列。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                           </div>
                           <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
                             <button onClick={() => setSingleDurationChartType('line')} className={`px-2 py-0.5 rounded-md transition-all ${singleDurationChartType === 'line' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>折线</button>
@@ -3890,8 +3895,8 @@ export default function App() {
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">间隔（对数）</div>
-                            <span data-tip="本次开始-上次结束的间隔，使用对数坐标。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                            <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">等待（对数）</div>
+                            <span data-tip="本次开始-上次结束的等待，使用对数坐标。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                           </div>
                           <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
                             <button onClick={() => setSingleGapChartType('line')} className={`px-2 py-0.5 rounded-md transition-all ${singleGapChartType === 'line' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>折线</button>
@@ -3903,16 +3908,16 @@ export default function App() {
                         ) : (
                           <svg viewBox="0 0 720 180" className="w-full h-44">
                             {(() => {
-                              const logBase = 6;
+                              const logBase = 2;
                               const logVals = detailGapSeries.map(v => Math.log(v + 1) / Math.log(logBase));
                               const logValsStart = detailStartGapSeries.map(v => Math.log(v + 1) / Math.log(logBase));
                               const allLogs = [...logVals, ...logValsStart];
-                              const maxVal = Math.max(...allLogs);
-                              const minVal = Math.min(...allLogs);
+                              const maxVal = Math.max(...allLogs, 0);
+                              const minVal = 0;
                               const range = Math.max(1e-6, maxVal - minVal);
-                              const rawMin = Math.min(...detailGapSeries);
-                              const rawMax = Math.max(...detailGapSeries);
-                              const rawMid = (rawMin + rawMax) / 2;
+                              const rawMin = 0;
+                              const rawMax = Math.max(...detailGapSeries, 0);
+                              const rawMid = rawMax / 2;
                               const anchorSeconds = [3600, 43200, 86400];
                               const anchorLines = anchorSeconds.map(sec => {
                                 const v = Math.log(sec + 1) / Math.log(logBase);
@@ -3938,7 +3943,7 @@ export default function App() {
                                           rx={2}
                                           fill={detailEvent.color}
                                           opacity={0.8}
-                                          data-tip={`间隔${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`}
+                                          data-tip={`等待${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`}
                                         />
                                       );
                                     })}
@@ -3972,22 +3977,22 @@ export default function App() {
                                     const x = 40 + (i / (logVals.length - 1)) * 640;
                                     const y = 150 - ((v - minVal) / range) * 120;
                                     return (
-                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`间隔${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`} />
+                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`等待${i + 1} · ${formatDuration(detailGapSeries[i] || 0)}`} />
                                     );
                                   })}
                                   {logValsStart.map((v, i) => {
                                     const x = 40 + (i / (logValsStart.length - 1 || 1)) * 640;
                                     const y = 150 - ((v - minVal) / range) * 120;
                                     return (
-                                      <circle key={`s-${i}`} cx={x} cy={y} r={3} fill={settings.darkMode ? '#9ca3af' : '#6b7280'} opacity={0.8} data-tip={`间隔（开始-开始）${i + 1} · ${formatDuration(detailStartGapSeries[i] || 0)}`} />
+                                      <circle key={`s-${i}`} cx={x} cy={y} r={3} fill={settings.darkMode ? '#9ca3af' : '#6b7280'} opacity={0.8} data-tip={`周期${i + 1} · ${formatDuration(detailStartGapSeries[i] || 0)}`} />
                                     );
                                   })}
                                   <line x1={40} y1={150} x2={680} y2={150} stroke={settings.darkMode ? '#374151' : '#e5e7eb'} />
                                   <text x={10} y={150} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMin)}</text>
                                   <text x={10} y={90} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMid)}</text>
                                   <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(rawMax)}</text>
-                                  <text x={520} y={18} fontSize="10" fill={detailEvent.color}>开始-结束</text>
-                                  <text x={600} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>开始-开始</text>
+                                  <text x={520} y={18} fontSize="10" fill={detailEvent.color}>等待</text>
+                                  <text x={600} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>周期</text>
                                 </>
                               );
                             })()}
@@ -3998,7 +4003,7 @@ export default function App() {
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">7天滑动窗口</div>
-                          <span data-tip="按天聚合，窗口=7天；展示总时长与总次数。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          <span data-tip="按天聚合，窗口=7天；展示总持续与总次数。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                         </div>
                         {detailWindowDuration.length < 2 || detailWindowCount.length < 2 ? (
                           <div className="text-xs text-gray-400">数据不足</div>
@@ -4036,7 +4041,7 @@ export default function App() {
                                         r={3}
                                         fill={detailEvent.color}
                                         opacity={0.85}
-                                        data-tip={`${d.date} · 时长 ${formatDuration(d.value)} · 次数 ${Math.round(countVal)}`}
+                                        data-tip={`${d.date} · 持续 ${formatDuration(d.value)} · 次数 ${Math.round(countVal)}`}
                                       />
                                     );
                                   })}
@@ -4044,7 +4049,7 @@ export default function App() {
                                   <text x={10} y={160} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0</text>
                                   <text x={10} y={30} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{formatDuration(maxDur)}</text>
                                   <text x={686} y={30} fontSize="10" textAnchor="end" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>{Math.round(maxCount)}次</text>
-                                  <text x={520} y={18} fontSize="10" fill={detailEvent.color}>时长</text>
+                                  <text x={520} y={18} fontSize="10" fill={detailEvent.color}>持续</text>
                                   <text x={585} y={18} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>次数</text>
                                 </>
                               );
@@ -4068,8 +4073,8 @@ export default function App() {
                             </div>
                             {acfLagMode === 'count' && (
                               <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
-                                <button onClick={() => setAcfMetric('duration')} className={`px-2 py-1 rounded-md transition-all ${acfMetric === 'duration' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>时长</button>
-                                <button onClick={() => setAcfMetric('gap')} className={`px-2 py-1 rounded-md transition-all ${acfMetric === 'gap' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>间隔</button>
+                                <button onClick={() => setAcfMetric('duration')} className={`px-2 py-1 rounded-md transition-all ${acfMetric === 'duration' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>持续</button>
+                                <button onClick={() => setAcfMetric('gap')} className={`px-2 py-1 rounded-md transition-all ${acfMetric === 'gap' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>等待</button>
                               </div>
                             )}
                           </div>
@@ -4144,8 +4149,8 @@ export default function App() {
 
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">惯性散点（上次-本次时长）</div>
-                          <span data-tip="X: 上次时长分钟；Y: 本次时长分钟。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">惯性散点（上次-本次持续）</div>
+                          <span data-tip="X: 上次持续分钟；Y: 本次持续分钟。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                         </div>
                         {detailInertiaPoints.length < 2 ? (
                           <div className="text-xs text-gray-400">数据不足</div>
@@ -4182,8 +4187,8 @@ export default function App() {
 
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">四象限散点（时间-时长）</div>
-                          <span data-tip="X: 一天内开始时间（分钟）；Y: 单次时长（分钟）；原点为 12:00 与 P50 时长。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">四象限散点（时间-持续）</div>
+                          <span data-tip="X: 一天内开始时间（分钟）；Y: 单次持续（分钟）；原点为 12:00 与 P50 持续。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                         </div>
                         {detailStartDurationPoints.length < 2 ? (
                           <div className="text-xs text-gray-400">数据不足</div>
@@ -4212,7 +4217,7 @@ export default function App() {
                                         r={3}
                                         fill={detailEvent.color}
                                         opacity={0.75}
-                                        data-tip={`开始 ${formatHourMinute(p.start)} · 时长 ${Math.round(p.durationMin)} 分钟`}
+                                        data-tip={`开始 ${formatHourMinute(p.start)} · 持续 ${Math.round(p.durationMin)} 分钟`}
                                       />
                                     );
                                   })}
@@ -4231,12 +4236,12 @@ export default function App() {
                           </svg>
                         )}
                       </div>
-                      {/* 开始时间-时长散点（已由四象限散点替代） */}
+                      {/* 开始时间-持续散点（已由四象限散点替代） */}
 
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">间隔-时长散点</div>
-                          <span data-tip="X: 间隔小时；Y: 本次时长小时。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">等待-持续散点</div>
+                          <span data-tip="X: 等待小时；Y: 本次持续小时。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                         </div>
                         {detailDurationSeries.length < 2 ? (
                           <div className="text-xs text-gray-400">数据不足</div>
@@ -4266,7 +4271,7 @@ export default function App() {
                                     const x = 50 + (p.gapHours / maxX) * 620;
                                     const y = 180 - (p.durationHours / maxY) * 140;
                                     return (
-                                      <circle key={idx} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.75} data-tip={`间隔 ${p.gapHours.toFixed(2)}小时 · 时长 ${p.durationHours.toFixed(2)}小时`} />
+                                      <circle key={idx} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.75} data-tip={`等待 ${p.gapHours.toFixed(2)}小时 · 持续 ${p.durationHours.toFixed(2)}小时`} />
                                     );
                                   })}
                                   <text x={50} y={205} fontSize="10" fill={settings.darkMode ? '#9ca3af' : '#6b7280'}>0小时</text>
@@ -4286,7 +4291,7 @@ export default function App() {
                         <div className="flex flex-wrap items-center justify-between mb-2 gap-3">
                           <div className="flex items-center gap-2">
                             <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">累计投入曲线</div>
-                            <span data-tip="X: 累计次数百分比；Y: 累计时长百分比。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                            <span data-tip="X: 累计次数百分比；Y: 累计持续百分比。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                           </div>
                           <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-[10px]">
                             <button onClick={() => setCumulativeRange('week')} className={`px-2 py-0.5 rounded-md transition-all ${cumulativeRange === 'week' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>本周</button>
@@ -4329,7 +4334,7 @@ export default function App() {
                                     const x = 50 + p.x * 620;
                                     const y = 180 - p.y * 140;
                                     return (
-                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`累计次数 ${(p.x * 100).toFixed(1)}% · 累计时长 ${(p.y * 100).toFixed(1)}%`} />
+                                      <circle key={i} cx={x} cy={y} r={3} fill={detailEvent.color} opacity={0.8} data-tip={`累计次数 ${(p.x * 100).toFixed(1)}% · 累计持续 ${(p.y * 100).toFixed(1)}%`} />
                                     );
                                   })}
                                   <line x1={50} y1={180} x2={690} y2={40} stroke={settings.darkMode ? '#4b5563' : '#d1d5db'} strokeDasharray="4" />
@@ -4396,8 +4401,8 @@ export default function App() {
 
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">日时长标准差</div>
-                          <span data-tip="按周/按月统计每天时长的标准差（不含零值日）。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">日持续标准差</div>
+                          <span data-tip="按周/按月统计每天持续的标准差（不含零值日）。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                         </div>
                         {detailSessions.filter(s => s.endTime).length < 3 ? (
                           <div className="text-xs text-gray-400">数据不足</div>
@@ -4570,7 +4575,7 @@ export default function App() {
                         <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
                           <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
                             趋势图
-                            <span data-tip="按日/周/月聚合的次数或时长趋势。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                            <span data-tip="按日/周/月聚合的次数或持续趋势。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
@@ -4580,7 +4585,7 @@ export default function App() {
                             </div>
                             <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
                               <button onClick={() => setTrendMetric('count')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'count' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>次数</button>
-                              <button onClick={() => setTrendMetric('duration')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'duration' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>时长</button>
+                              <button onClick={() => setTrendMetric('duration')} className={`px-2 py-1 rounded-md transition-all ${trendMetric === 'duration' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>持续</button>
                             </div>
                             <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
                               <button onClick={() => setTrendChartType('line')} className={`px-2 py-1 rounded-md transition-all ${trendChartType === 'line' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>折线</button>
@@ -4594,7 +4599,7 @@ export default function App() {
                       <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
                         <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
                           雷达图
-                          <span data-tip="包含周分布与时钟雷达（按星期平均时长）。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
+                          <span data-tip="包含周分布与时钟雷达（按星期平均持续）。" className="inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full border border-gray-400 text-gray-500">i</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="bg-white/60 dark:bg-black/10 rounded-2xl">
@@ -4611,7 +4616,7 @@ export default function App() {
                           <HeatmapCalendar title="活跃频率" dataMap={detailHeatmapCount} color={detailEvent.color} unit="次" weekStart={settings.weekStart} darkMode={settings.darkMode} />
                         </div>
                         <div className="bg-gray-50 dark:bg-[#2c3038] p-4 rounded-2xl">
-                          <HeatmapCalendar title="投入时间" dataMap={detailHeatmapDuration} color={detailEvent.color} unit="秒" weekStart={settings.weekStart} darkMode={settings.darkMode} />
+                          <HeatmapCalendar title="投入持续" dataMap={detailHeatmapDuration} color={detailEvent.color} unit="秒" weekStart={settings.weekStart} darkMode={settings.darkMode} />
                         </div>
                       </div>
 
