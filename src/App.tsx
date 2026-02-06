@@ -161,9 +161,19 @@ const buildPercentileMap = (values: number[]) => {
   const map = new Map<number, number>();
   if (sorted.length === 0) return map;
   const unique = [...new Set(sorted)];
+  const rawPercentiles: number[] = [];
   unique.forEach((val) => {
     const rank = sorted.lastIndexOf(val) + 1;
-    map.set(val, rank / sorted.length);
+    const percentile = rank / sorted.length;
+    rawPercentiles.push(percentile);
+    map.set(val, percentile);
+  });
+  const minP = Math.min(...rawPercentiles);
+  const maxP = Math.max(...rawPercentiles);
+  const range = Math.max(1e-6, maxP - minP);
+  unique.forEach((val) => {
+    const normalized = (map.get(val)! - minP) / range;
+    map.set(val, normalized);
   });
   return map;
 };
