@@ -145,10 +145,27 @@ const formatDuration = (seconds: number) => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
-const getThermalColor = (t: number) => {
-  const clamped = Math.max(0, Math.min(1, t));
-  const hue = 220 - clamped * 220;
-  return `hsl(${hue}, 90%, 50%)`;
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+const getTurboColor = (t: number) => {
+  const x = clamp01(t);
+  const r = 34.61 + x * (1172.33 + x * (-10793.56 + x * (33300.12 + x * (-38394.49 + x * 14825.05))));
+  const g = 23.31 + x * (557.33 + x * (-4757.62 + x * (14935.58 + x * (-17130.9 + x * 6594.23))));
+  const b = 27.2 + x * (3211.1 + x * (-15327.97 + x * (36257.44 + x * (-35738.5 + x * 13104.86))));
+  const clamp255 = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  return `rgb(${clamp255(r)} ${clamp255(g)} ${clamp255(b)})`;
+};
+
+const buildPercentileMap = (values: number[]) => {
+  const sorted = values.filter(v => v > 0).sort((a, b) => a - b);
+  const map = new Map<number, number>();
+  if (sorted.length === 0) return map;
+  const unique = [...new Set(sorted)];
+  unique.forEach((val) => {
+    const rank = sorted.lastIndexOf(val) + 1;
+    map.set(val, rank / sorted.length);
+  });
+  return map;
 };
 
 const getDayKey = (dateInput: string | Date) => {
@@ -651,24 +668,16 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
     for (let i = 0; i < 1440; i++) maxOverlap = Math.max(maxOverlap, minuteCounts[i]);
     if (maxOverlap === 0) maxOverlap = 1;
 
-    const activeCounts = Array.from(minuteCounts).filter(c => c > 0).sort((a, b) => a - b);
-    const countToAlpha = new Map<number, number>();
-    if (activeCounts.length > 0) {
-      const uniqueCounts = [...new Set(activeCounts)];
-      uniqueCounts.forEach(val => {
-        const rank = activeCounts.lastIndexOf(val) + 1;
-        const percentile = rank / activeCounts.length;
-        countToAlpha.set(val, 0.3 + (percentile * 0.7));
-      });
-    }
+    const percentileMap = buildPercentileMap(Array.from(minuteCounts));
 
     const sliceWidth = width / 1440;
     for (let i = 0; i < 1440; i++) {
       const count = minuteCounts[i];
       if (count === 0) continue;
-      const alpha = countToAlpha.get(count) || (count / maxOverlap);
-      if (palette === 'thermal') {
-        ctx.fillStyle = getThermalColor(alpha);
+      const percentile = percentileMap.get(count) || (count / maxOverlap);
+      const alpha = 0.1 + (percentile * 0.9);
+      if (palette === 'turbo') {
+        ctx.fillStyle = getTurboColor(percentile);
         ctx.globalAlpha = 1;
       } else {
         ctx.fillStyle = color;
@@ -702,6 +711,7 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
     let maxCount = 0;
     grid.forEach(row => row.forEach(v => { maxCount = Math.max(maxCount, v); }));
     if (maxCount === 0) maxCount = 1;
+    const percentileMap = buildPercentileMap(grid.flatMap(row => Array.from(row)));
 
     const cellW = width / 1440;
     const cellH = height / 7;
@@ -709,13 +719,13 @@ const DailyTimelineSpectrum = ({ sessions, compareSessions, color, mode = '1d', 
       for (let m = 0; m < 1440; m++) {
         const val = grid[d][m];
         if (val === 0) continue;
-        const t = val / maxCount;
-        if (palette === 'thermal') {
-          ctx.fillStyle = getThermalColor(t);
+        const percentile = percentileMap.get(val) || (val / maxCount);
+        if (palette === 'turbo') {
+          ctx.fillStyle = getTurboColor(percentile);
           ctx.globalAlpha = 1;
         } else {
           ctx.fillStyle = color;
-          ctx.globalAlpha = 0.2 + t * 0.8;
+          ctx.globalAlpha = 0.2 + (val / maxCount) * 0.8;
         }
         ctx.fillRect(m * cellW, d * cellH, cellW, cellH);
       }
@@ -1745,7 +1755,7 @@ export default function App() {
   const [spectrumRange, setSpectrumRange] = useState<'all' | '7' | '30'>('30');
   const [polarEnvelopeBin, setPolarEnvelopeBin] = useState<30 | 60>(30);
   const [spectrumMode, setSpectrumMode] = useState<'1d' | '2d'>('1d');
-  const [spectrumPalette, setSpectrumPalette] = useState<'mono' | 'thermal'>('mono');
+  const [spectrumPalette, setSpectrumPalette] = useState<'mono' | 'turbo'>('mono');
   const [ridgePeriod, setRidgePeriod] = useState<'week' | 'month'>('week');
   const [burstPeriod, setBurstPeriod] = useState<'week' | 'month'>('week');
   const [acfLagMode, setAcfLagMode] = useState<'count' | 'day'>('count');
@@ -3051,7 +3061,7 @@ export default function App() {
               <span className="text-[#34A853] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>l</span>
               <span className="text-[#EA4335] font-serif italic" style={{ fontFamily: 'Times New Roman' }}>y</span>
             </div>
-            <span className="text-xs text-m3-on-surface-variant hidden sm:inline">专注记录</span>
+            <span className="text-xs text-m3-on-surface-variant hidden sm:inline">追溯习惯</span>
           </div>
           <div className="flex items-center gap-2">
             {user && (
@@ -3523,9 +3533,10 @@ export default function App() {
               const detailAcf = computeACF(detailLagSeries, Math.min(30, Math.max(1, detailLagSeries.length - 1)));
 
               return (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setDetailEventId(null)}>
                   <div
                     className="bg-white dark:bg-[#1e2330] w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-[28px] p-6 md:p-8 shadow-2xl relative m3-scrollbar"
+                    onClick={(e) => e.stopPropagation()}
                     onMouseOver={handleChartTooltipMove}
                     onMouseMove={handleChartTooltipMove}
                     onMouseLeave={clearChartTooltip}
@@ -3533,17 +3544,19 @@ export default function App() {
                     onTouchMove={handleChartTooltipMove}
                     onTouchEnd={clearChartTooltip}
                   >
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-8 rounded-full" style={{ backgroundColor: detailEvent.color }} />
-                        <div>
-                          <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">{detailEvent.name}</h3>
-                          <p className="text-xs text-gray-400">单事件详细分析</p>
+                    <div className="sticky top-0 z-10 -mx-6 md:-mx-8 px-6 md:px-8 pt-2 pb-4 mb-6 bg-white/95 dark:bg-[#1e2330]/95 backdrop-blur border-b border-gray-100/60 dark:border-gray-700/60">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-8 rounded-full" style={{ backgroundColor: detailEvent.color }} />
+                          <div>
+                            <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">{detailEvent.name}</h3>
+                            <p className="text-xs text-gray-400">单事件详细分析</p>
+                          </div>
                         </div>
+                        <button onClick={() => setDetailEventId(null)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                          <Icons.X size={18} />
+                        </button>
                       </div>
-                      <button onClick={() => setDetailEventId(null)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-                        <Icons.X size={18} />
-                      </button>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -4472,13 +4485,17 @@ export default function App() {
                           <svg viewBox={`0 0 720 ${detailRidgeFiltered.length * 12 + 20}`} className="w-full h-auto">
                             {detailRidgeFiltered.map((slice, idx) => {
                               const baseY = 20 + idx * 12;
+                              const sliceValues = Array.from(slice.counts);
+                              const slicePercentile = buildPercentileMap(sliceValues);
+                              const sliceMax = Math.max(1, ...sliceValues);
                               return (
                                 <g key={slice.label}>
                                   {Array.from(slice.counts).map((v, i) => {
                                     if (v === 0) return null;
                                     const t = v / detailRidgeMax;
-                                    const color = spectrumPalette === 'thermal'
-                                      ? getThermalColor(t)
+                                    const percentile = slicePercentile.get(v) || (v / sliceMax);
+                                    const color = spectrumPalette === 'turbo'
+                                      ? getTurboColor(percentile)
                                       : `rgba(${themeRgb}, ${0.2 + t * 0.8})`;
                                     const x = 40 + (i / 1440) * 640;
                                     return (
@@ -4616,7 +4633,7 @@ export default function App() {
                             </div>
                             <div className="bg-white dark:bg-gray-700 p-0.5 rounded-lg flex text-xs">
                               <button onClick={() => setSpectrumPalette('mono')} className={`px-2 py-1 rounded-md transition-all ${spectrumPalette === 'mono' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>纯色</button>
-                              <button onClick={() => setSpectrumPalette('thermal')} className={`px-2 py-1 rounded-md transition-all ${spectrumPalette === 'thermal' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>冷热色</button>
+                              <button onClick={() => setSpectrumPalette('turbo')} className={`px-2 py-1 rounded-md transition-all ${spectrumPalette === 'turbo' ? 'bg-gray-100 dark:bg-gray-600 shadow-sm text-[rgb(var(--theme-rgb))] font-bold' : 'text-gray-500'}`}>Turbo 彩虹</button>
                             </div>
                           </div>
                         </div>
